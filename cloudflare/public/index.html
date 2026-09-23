@@ -241,6 +241,56 @@
     .chip { display: none; }
     .hero .meta { margin-left: 0; text-align: left; width: 100%; }
   }
+
+  /* ---- BOOT / SPLASH (figura de modem) ---- */
+  #boot {
+    position: fixed; inset: 0; z-index: 9999;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+    background: radial-gradient(1200px 700px at 50% -10%, #0e1a2b 0%, #070b10 65%);
+    color: var(--text); text-align: center;
+    opacity: 1; transition: opacity .7s ease;
+  }
+  #boot.hidden { opacity: 0; pointer-events: none; }
+  #boot svg.modem { width: min(54vw, 210px); height: auto; filter: drop-shadow(0 18px 40px rgba(22,211,240,.18)); animation: bootPulse 1.8s ease-in-out infinite; }
+  @keyframes bootPulse { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+  #boot .boot-brand { font-size: 26px; font-weight: 800; letter-spacing: .35em; color: #fff; }
+  #boot .boot-brand b { color: var(--cyan); font-weight: 800; }
+  #boot .boot-sub { font-size: 12px; color: var(--muted); letter-spacing: .18em; text-transform: uppercase; margin-top: -8px; }
+  #boot .boot-leds { display: flex; gap: 8px; margin-top: 6px; }
+  #boot .boot-leds i { width: 9px; height: 9px; border-radius: 50%; animation: ledBlink 1.2s infinite; }
+  #boot .boot-leds i:nth-child(1) { background: var(--green); animation-delay: 0s; }
+  #boot .boot-leds i:nth-child(2) { background: var(--cyan); animation-delay: .2s; }
+  #boot .boot-leds i:nth-child(3) { background: var(--yellow); animation-delay: .4s; }
+  #boot .boot-leds i:nth-child(4) { background: var(--blue); animation-delay: .6s; }
+  @keyframes ledBlink { 0%,100% { opacity: .25; transform: scale(.9); } 50% { opacity: 1; transform: scale(1); } }
+
+  /* ---- AGENTE (sinalizacao p/ tecnico/operador) ---- */
+  .agent {
+    border: 1px solid var(--border2); border-radius: var(--radius);
+    background: linear-gradient(160deg, var(--panel2), var(--panel));
+    padding: 16px; margin-bottom: 16px;
+  }
+  .agent-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .agent-head .ai { width: 26px; height: 26px; }
+  .agent-head .at { font-size: 13px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); flex: 1; }
+  .agent-badge { font-size: 11px; font-weight: 800; letter-spacing: .14em; padding: 5px 12px; border-radius: 999px; text-transform: uppercase; }
+  .agent-badge.ok   { background: var(--greenBg); color: var(--green); }
+  .agent-badge.warn { background: var(--yellowBg); color: var(--yellow); }
+  .agent-badge.crit { background: var(--redBg); color: var(--red); }
+  .agent-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 640px) { .agent-grid { grid-template-columns: 1fr; } }
+  .agent-cell { border: 1px solid var(--border); border-radius: 10px; padding: 12px; background: var(--panel); }
+  .agent-cell .k { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+  .agent-cell .v { font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .agent-cell .u { font-size: 11px; color: var(--muted); margin-left: 4px; }
+  .agent-cell .m { font-size: 12px; margin-top: 8px; line-height: 1.45; color: var(--text); }
+  .agent-cell.ok   { border-color: rgba(51,217,107,.4); }
+  .agent-cell.warn { border-color: rgba(245,184,66,.45); }
+  .agent-cell.crit { border-color: rgba(255,91,87,.5); }
+  .agent-cell.ok .v   { color: var(--green); }
+  .agent-cell.warn .v { color: var(--yellow); }
+  .agent-cell.crit .v { color: var(--red); }
+  .agent-foot { margin-top: 12px; font-size: 12px; color: var(--muted); line-height: 1.5; padding-top: 10px; border-top: 1px dashed var(--border); }
 </style>
 </head>
 <body>
@@ -255,6 +305,26 @@
   </div>
   <div class="chip"><span class="dot"></span> niveis.virtua.com.br</div>
 </header>
+
+<div id="boot">
+  <svg class="modem" viewBox="0 0 220 120" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <rect x="20" y="52" width="180" height="44" rx="14" fill="#16202d" stroke="#2e4058" stroke-width="3"/>
+    <rect x="20" y="52" width="180" height="18" rx="9" fill="#1b2736"/>
+    <circle cx="46" cy="78" r="5" fill="#33d96b"/>
+    <circle cx="66" cy="78" r="5" fill="#16d3f0"/>
+    <circle cx="86" cy="78" r="5" fill="#f5b842"/>
+    <circle cx="106" cy="78" r="5" fill="#2f9cf0"/>
+    <path d="M140 72h46" stroke="#223042" stroke-width="3" stroke-linecap="round"/>
+    <path d="M140 82h40" stroke="#223042" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="196" cy="72" r="6" fill="#0d141d" stroke="#2e4058" stroke-width="2"/>
+    <path d="M84 36a34 34 0 0 1 52 0" stroke="#16d3f0" stroke-width="5" stroke-linecap="round"/>
+    <path d="M98 46a18 18 0 0 1 24 0" stroke="#16d3f0" stroke-width="5" stroke-linecap="round"/>
+    <circle cx="110" cy="56" r="4" fill="#16d3f0"/>
+  </svg>
+  <div class="boot-brand">AFLINE<em style="font-style:normal;color:#16d3f0">.</em></div>
+  <div class="boot-sub">Sistema de Consulta de Niveis</div>
+  <div class="boot-leds"><i></i><i></i><i></i><i></i></div>
+</div>
 
 <main>
   <div class="section-label">Nova consulta</div>
@@ -553,6 +623,85 @@
     return null;
   }
 
+  function numOf(v) {
+    var s = String(v || "").trim();
+    var m = /[-+]?\d+(?:[.,]\d+)?/.exec(s);
+    if (!m) return null;
+    var t = m[0];
+    if (t.indexOf(",") >= 0) t = t.replace(/\./g, "").replace(",", ".");
+    var n = parseFloat(t);
+    return isNaN(n) ? null : n;
+  }
+  function cellText(c) {
+    return c ? String(c.text !== undefined ? c.text : c.v || "") : "";
+  }
+  function fmtNum(n) {
+    if (n === null || n === undefined) return "—";
+    return String(n).replace(".", ",");
+  }
+  function findSignal(tables, boxes, re) {
+    for (var i = 0; i < tables.length; i++) {
+      var sec = tables[i];
+      if (!sec.headers || !sec.rows.length) continue;
+      for (var h = 0; h < sec.headers.length; h++) {
+        if (re.test(String(sec.headers[h]))) {
+          if (sec.rows[0][h]) return cellText(sec.rows[0][h]);
+        }
+      }
+    }
+    for (var j = 0; j < boxes.length; j++) {
+      var g = boxes[j];
+      for (var l = 0; l < g.labels.length; l++) {
+        if (re.test(String(g.labels[l]))) return cellText(g.valores[l]);
+      }
+    }
+    return null;
+  }
+
+  function agenteSinais(tables, boxes) {
+    var txTxt = findSignal(tables, boxes, /sinal\s*tx/i);
+    var rxTxt = findSignal(tables, boxes, /(sinal\s*rx|receive\s*power)/i);
+    if (txTxt === null && rxTxt === null) return "";
+    var tx = txTxt !== null ? numOf(txTxt) : null;
+    var rx = rxTxt !== null ? numOf(rxTxt) : null;
+
+    var txCls = null, txMsg = "", txVal = "—";
+    if (tx !== null) {
+      txVal = fmtNum(tx);
+      if (tx <= 45) { txCls = "ok"; txMsg = "TX dentro da faixa ideal (&le;45 dBmV). Pot&ecirc;ncia de subida OK."; }
+      else if (tx < 50) { txCls = "warn"; txMsg = "TX elevado (" + txVal + " dBmV). Faixa 46-48 exige aten&ccedil;&atilde;o: verificar atenua&ccedil;&atilde;o e passivos."; }
+      else { txCls = "crit"; txMsg = "TX cr&iacute;tico (" + txVal + " dBmV). Verificar pot&ecirc;ncia de subida e passivos do tap no poste."; }
+    }
+    var rxCls = null, rxMsg = "", rxVal = "—";
+    if (rx !== null) {
+      rxVal = fmtNum(rx);
+      if (rx >= -12 && rx <= 12) { rxCls = "ok"; rxMsg = "RX dentro da faixa (-12 a +12 dBmV). N&iacute;vel recebido OK."; }
+      else { rxCls = "crit"; rxMsg = "RX fora da faixa (" + rxVal + " dBmV). Verificar passivos internos ou tap no poste."; }
+    }
+
+    var overall = "ok";
+    if (txCls === "crit" || rxCls === "crit") overall = "crit";
+    else if (txCls === "warn" || rxCls === "warn") overall = "warn";
+    var badgeTxt = overall === "ok" ? "OK" : overall === "warn" ? "ATENCAO" : "CRITICO";
+
+    var h = '<div class="agent">';
+    h += '<div class="agent-head">' +
+      '<svg class="ai" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 3v6c0 5-3.5 8.5-8 11-4.5-2.5-8-6-8-11V5z"/><path d="M9 12l2 2 4-4"/></svg>' +
+      '<div class="at">Agente de Sinais</div>' +
+      '<div class="agent-badge ' + overall + '">' + badgeTxt + "</div></div>";
+    h += '<div class="agent-grid">';
+    if (tx !== null) {
+      h += '<div class="agent-cell ' + txCls + '"><div class="k">Sinal TX</div><div class="v">' + txVal + '<span class="u">dBmV</span></div><div class="m">' + txMsg + "</div></div>";
+    }
+    if (rx !== null) {
+      h += '<div class="agent-cell ' + rxCls + '"><div class="k">Sinal RX</div><div class="v">' + rxVal + '<span class="u">dBmV</span></div><div class="m">' + rxMsg + "</div></div>";
+    }
+    h += "</div>";
+    h += '<div class="agent-foot">Faixa de refer&ecirc;ncia: TX &le;45 dBmV &middot; RX entre -12 e +12 dBmV. Ajustes devem ser validados em campo pelo t&eacute;cnico/operador.</div>';
+    h += "</div>";
+    return h;
+  }
+
   function renderResult(html, extraAlerts) {
     var doc = new DOMParser().parseFromString(html, "text/html");
     var alerts = extractAlerts(doc);
@@ -593,6 +742,8 @@
         "</b><br />" + escapeHtml(new Date().toLocaleString("pt-BR")) + "</div>" +
         "</div>";
     }
+
+    htmlOut += agenteSinais(tables, boxes);
 
     boxes.forEach(function (g) {
       var titleCls = "box-title";
@@ -891,6 +1042,14 @@
   updateCooldown();
   renderHistory();
   refreshCaptcha();
+
+  setTimeout(function () {
+    var b = $("boot");
+    if (b) b.classList.add("hidden");
+    setTimeout(function () {
+      if (b) b.style.display = "none";
+    }, 750);
+  }, 2400);
 })();
 </script>
 </body>
