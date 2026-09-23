@@ -18,6 +18,15 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import unquote_plus, urlencode
 from urllib.request import HTTPCookieProcessor, Request, build_opener
 
+try:
+    import cv2
+    import numpy as np
+    import pytesseract
+    pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+    OCR_AVAILABLE = True
+except Exception:
+    OCR_AVAILABLE = False
+
 BASE = "http://niveis.virtua.com.br"
 HOST = "127.0.0.1"
 PORT = 8777
@@ -128,6 +137,143 @@ def upstream(method, path, data=None, referer=None):
             return resp.status, ctype, raw
 
 
+_OCR_WS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+
+def ocr_read(img_bytes):
+    """Le o freeCap pelo Tesseract. O captcha do portal usa SOMENTE LETRAS
+    (informado pelo operador); usamos whitelist sem numeros e votacao
+    entre variantes (threshold/invertido/escala) para maior acerto."""
+    if not OCR_AVAILABLE:
+        return ""
+    try:
+        img = cv2.imdecode(np.frombuffer(img_bytes, np.uint8), cv2.IMREAD_GRAYSCALE)
+        if img is None:
+            return ""
+    except Exception:
+        return ""
+    cand = {}
+    for scale in (2, 3):
+        big = cv2.resize(img, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
+        b = cv2.threshold(big, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
+        for variant in (b, 255 - b):
+            try:
+                txt = pytesseract.image_to_string(
+                    variant, config="--psm 7 -c tessedit_char_whitelist=" + _OCR_WS
+                ).strip()
+            except Exception:
+                continue
+            txt = re.sub(r"[^A-Za-z]", "", txt)
+            if len(txt) >= 3:
+                cand[txt] = cand.get(txt, 0) + 1
+    return sorted(cand.items(), key=lambda kv: (-kv[1], -len(kv[0])))[0][0] if cand else ""
+
+
+def auto_consulta(cod_cidade, mac):
+    """Fluxo com resolucao automatica do captcha. Cria SESSION NOVA por consulta
+    (o portal bloqueia por cookie depois de muitas tentativas). Faz ate 3 ciclos
+    de OCR+submit; se o portal pedir cooldown/excesso, renova a sessao e continua
+    (maximo 3 sessoes). Retorna (html_final, alerts, ok)."""
+    ocr_errors = 0
+    for sessao in range(3):
+        jar = CookieJar()
+        op = build_opener(HTTPCookieProcessor(jar))
+        for ciclo in range(3):
+            referer = BASE + "/fr_esquerda.php"
+            try:
+                req = Request(BASE + "/freecap/freecap.php", headers={
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) dash-local",
+                    "Referer": referer, "Accept": "image/png,*/*",
+                })
+                with op.open(req, timeout=TIMEOUT) as resp:
+                    img_bytes = resp.read()
+                word = ocr_read(img_bytes)
+                if not word:
+                    ocr_errors += 1
+                    time.sleep(1.0)
+                    continue
+                data = {
+                    "cod_cidade": cod_cidade, "mac": mac,
+                    "word": word, "btConsultar": "Consultar",
+                }
+                req2 = Request(BASE + "/fr_esquerda.php", data=urlencode(data).encode("utf-8"), headers={
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) dash-local",
+                    "Referer": referer, "Content-Type": "application/x-www-form-urlencoded",
+                }, method="POST")
+                with op.open(req2, timeout=TIMEOUT) as resp2:
+                    a = resp2.read().decode("utf-8", "replace")
+                al = body_alerts(a)
+                joined = " ".join(al).lower()
+                if "caracteres" in joined:
+                    ocr_errors += 1
+                    time.sleep(1.2)
+                    continue
+                if "45 segundos" in joined or "excesso" in joined or "tentativas" in joined \
+                        or "aguarde 1 minuto" in joined or "aguarde 1 minuto" in joined.lower():
+                    return None, ["O portal pediu para aguardar (cooldown ativo). Tente de novo em ~1 minuto."], False
+                # captcha aceito: segue o fluxo normal (via helper abaixo)
+                return _finish_auto(op, a, al)
+            except (HTTPError, URLError, TimeoutError):
+                time.sleep(1.5)
+                break
+    return None, ["Nao consegui resolver o CAPTCHA automaticamente (tentativas excedidas)."], False
+
+
+import json
+
+
+def safe_json(obj):
+    return json.dumps(obj, ensure_ascii=False)
+
+
+def _finish_auto(op, a, alerts):
+    """Depois do captcha aceito: segue o redirect e faz polling ate vir os dados."""
+    extra_body = ""
+    follow_url = None
+    m = re.search(r'window\s*\.\s*open\s*\(\s*["\']([^"\']*fr_direita[^"\']*)["\']', a, re.I)
+    if m:
+        follow_url = m.group(1).strip()
+    elif "fr_direita.php" in a:
+        follow_url = "fr_direita.php"
+    if not follow_url:
+        if not alerts:
+            alerts.append("Captcha aceito, mas o portal nao iniciou a consulta (recarregue e tente).")
+        return a, alerts, False
+    path = follow_url if follow_url.startswith("/") else "/" + follow_url
+    for attempt in range(16):
+        try:
+            req = Request(BASE + path, headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) dash-local",
+                "Referer": BASE + "/fr_esquerda.php",
+            })
+            with op.open(req, timeout=TIMEOUT) as resp2:
+                raw2 = resp2.read()
+            b = raw2.decode("utf-8", "replace")
+            if not b:
+                time.sleep(3)
+                continue
+            kind = page_kind(b)
+            if kind == "dados":
+                extra_body = extract_body(b) or b
+                alerts += body_alerts(b)
+                return extra_body, alerts, True
+            if kind == "erro":
+                alerts += body_alerts(b)
+                txt = ""
+                me = re.search(r'<([a-z0-9]+)[^>]*class=["\'][^"\']*mensagem_erro[^"\']*["\'][^>]*>(.*?)</\1>', b, re.S | re.I)
+                if me:
+                    txt = re.sub(r"\s+", " ", me.group(2)).strip()
+                if txt:
+                    alerts.append(txt)
+                return a, alerts, False
+            time.sleep(3)
+        except (HTTPError, URLError, TimeoutError):
+            break
+    if not alerts:
+        alerts.append("Consulta aceita, mas o portal nao retornou dados (cooldown ativo?).")
+    return a, alerts, False
+
+
 class Handler(BaseHTTPRequestHandler):
     server_version = "NiveisDash/1.0"
 
@@ -171,6 +317,9 @@ class Handler(BaseHTTPRequestHandler):
                 self._send(code, ctype or "image/png", raw)
             except (HTTPError, URLError, TimeoutError) as e:
                 self._send(502, "text/plain; charset=utf-8", f"Erro ao obter captcha: {e}")
+        elif path == "/ocrstatus":
+            self._send(200, "application/json; charset=utf-8",
+                       '{"ocr": %s}' % ("true" if OCR_AVAILABLE else "false"))
         else:
             self._send(404, "text/plain; charset=utf-8", "Not found")
 
@@ -183,7 +332,8 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_POST(self):
-        if self.path.split("?", 1)[0] != "/consulta":
+        _path = self.path.split("?", 1)[0]
+        if _path != "/consulta" and _path != "/autoconsulta":
             self._send(404, "text/plain; charset=utf-8", "Not found")
             return
         length = int(self.headers.get("Content-Length") or 0)
@@ -199,6 +349,24 @@ class Handler(BaseHTTPRequestHandler):
             "word": fields.get("word", ""),
             "btConsultar": "Consultar",
         }
+        if _path == "/autoconsulta":
+            try:
+                if not OCR_AVAILABLE:
+                    self._send(503, "application/json; charset=utf-8",
+                               '{"ok":false,"alerts":["OCR nao disponivel no servidor (instale Tesseract + pip cv2/pytesseract)."]}')
+                    return
+                html, alerts, ok = auto_consulta(data["cod_cidade"], data["mac"])
+                if ok and html:
+                    self._send(200, "application/json; charset=utf-8",
+                               safe_json({"ok": True, "html": html, "alerts": alerts}))
+                else:
+                    self._send(200, "application/json; charset=utf-8",
+                               safe_json({"ok": False, "alerts": alerts}))
+            except Exception as e:
+                _dbg("autoconsulta ERROR %r" % (e,))
+                self._send(500, "application/json; charset=utf-8",
+                           safe_json({"ok": False, "alerts": ["Erro interno no auto-captcha: %s" % e]}))
+            return
         try:
             code, ctype, raw = upstream(
                 "POST", "/fr_esquerda.php", data=data, referer=BASE + "/fr_esquerda.php"

@@ -242,6 +242,12 @@
     font-size: 12px; border-top: 1px solid var(--border);
   }
   footer b { color: var(--cyan); }
+  footer .foot-sig { display: block; margin-top: 6px; color: var(--accent); }
+
+  .auto-row { margin: 8px 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .auto-label { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; color: var(--muted); }
+  .auto-label input { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+  .auto-status { font-size: 12px; color: var(--muted); }
 
   @media (max-width: 640px) {
     .chip { display: none; }
@@ -390,6 +396,13 @@
           <span id="btnConsultarTxt">Consultar</span>
         </button>
       </div>
+      <div class="auto-row">
+        <label class="auto-label" id="autoWrap" style="display:none">
+          <input type="checkbox" id="chkAuto" />
+          <span>Resolver o CAPTCHA automaticamente (OCR)</span>
+        </label>
+        <span class="auto-status" id="autoStatus"></span>
+      </div>
       <div class="hint">CAPTCHA resolvido por voce &mdash; a sessao da imagem e a mesma do POST. Formato MAC: somente numeros e letras (ex.: A0B0C0D0E0F0).</div>
       <div id="status"></div>
     </form>
@@ -414,6 +427,7 @@
 
 <footer>
   <b>AFLINE</b> &middot; Sistema de Consulta de Niveis &middot; Modem HFC &mdash; niveis.virtua.com.br
+  <span class="foot-sig">Desenvolvido por Israelson Diego Rodrigues Sevalho</span>
 </footer>
 
 <div id="toast" role="status"></div>
@@ -965,12 +979,28 @@
       showToast("Consulta expirou (60s).");
     }, 60000);
 
+    var autoOn = !MODO_DIRETO && !MODO_APK && $("chkAuto") && $("chkAuto").checked;
     var body = new URLSearchParams({ cod_cidade: v.cidade, mac: v.mac, word: v.word });
     if (MODO_DIRETO) body.set("btConsultar", "Consultar");
+    var consultaUrl = autoOn ? api("autoconsulta") : api("consulta");
 
-    transport("POST", api("consulta"), body, ctrl.signal)
+    transport("POST", consultaUrl, body, ctrl.signal)
       .then(function (text) {
         clearTimeout(watchdog);
+        if (autoOn) {
+          var parsed = null;
+          try { parsed = JSON.parse(text); } catch (e) { /* nao e json */ }
+          if (parsed && parsed.ok && parsed.html) {
+            renderResult(parsed.html, parsed.alerts || []);
+            return;
+          }
+          if (parsed && parsed.alerts && parsed.alerts.length) {
+            renderAlertsOnly(parsed.alerts);
+            return;
+          }
+          renderResult(text);
+          return;
+        }
         if (MODO_DIRETO) return handleDirectFlow(text);
         if (isJson(text)) {
           return handleJsonFlow(JSON.parse(text));
@@ -1106,6 +1136,37 @@
   updateCooldown();
   renderHistory();
   refreshCaptcha();
+
+  // Resolucao automatica do CAPTCHA (OCR): disponivel no proxy local quando o
+  // Tesseract/OpenCV estao instalados. Nao disponivel em modo direto/APK nem no Worker.
+  var autoStatus = $("autoStatus");
+  var autoWrap = $("autoWrap");
+  if (!MODO_DIRETO && !MODO_APK) {
+    fetch(api("ocrstatus"), { credentials: "include" })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (j && j.ocr) {
+          autoWrap.style.display = "";
+          autoStatus.textContent = "OCR ativo — quem resolve o captcha e o servidor.";
+          $("chkAuto").checked = true;
+          $("captcha").closest(".captcha-row").style.display = "none";
+          $("word").closest(".field").style.display = "none";
+        } else {
+          autoWrap.style.display = "";
+          autoStatus.textContent = "OCR indisponivel neste servidor — digitacao manual.";
+        }
+      })
+      .catch(function () {
+        autoStatus.textContent = "";
+      });
+  }
+
+  var chkAuto = $("chkAuto");
+  chkAuto.addEventListener("change", function () {
+    var on = chkAuto.checked;
+    $("captcha").closest(".captcha-row").style.display = on ? "none" : "";
+    $("word").closest(".field").style.display = on ? "none" : "";
+  });
 
   setTimeout(function () {
     var b = $("boot");
