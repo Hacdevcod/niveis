@@ -1,0 +1,30 @@
+# -- CLOUDFLARE --
+cloudflare/node_modules/
+cloudflare/.wrangler/
+wrangler.log
+*.idsig
+
+# -- ANDROID BUILD --
+apk/android/obj/
+apk/android/dexout/
+apk/android/app.*.apk
+apk/android/*.apk
+apk/android/*.keystore
+apk/android/version.txt
+
+# -- PROXY RUNTIME --
+last_result.html
+last_erro.html
+proxy_debug.log
+
+# -- OS / EDITORS --
+Thumbs.db
+.DS_Store
+*.log
+
+# -- PYTHON --
+__pycache__/
+*.pyc
+
+# -- SECRETS (nunca subir) --
+apk/android/worker_url.txt
