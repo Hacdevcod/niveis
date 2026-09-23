@@ -82,6 +82,11 @@ public class MainActivity extends Activity {
             });
 
             setContentView(webView);
+
+            // Ponte Java<->JS : resolve rede direto do Java (envia os cookies da sessao
+            // e contorna bloqueio de CORS/origem que o WebView aplica em pagina file://).
+            webView.addJavascriptInterface(new JsBridge(), "Afline");
+
             webView.loadUrl(START_URL);
 
         } catch (Throwable t) {

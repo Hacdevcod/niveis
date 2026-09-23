@@ -434,6 +434,7 @@
     ? CONFIG.API_BASE_URL.replace(/\/+$/, "")
     : "";
   var MODO_DIRETO = !!(typeof CONFIG !== "undefined" && CONFIG && CONFIG.MODO_DIRETO);
+  var MODO_APK = typeof Afline !== "undefined" && !!Afline;
   var PORTAL_BASE = "http://niveis.virtua.com.br";
   function api(path) {
     if (!MODO_DIRETO) return API_BASE + path;
@@ -451,6 +452,21 @@
     return t.charAt(0) === "{" || t.charAt(0) === "[";
   }
 
+  function transport(method, url, body, signal) {
+    var payload = body;
+    if (typeof URLSearchParams !== "undefined" && payload instanceof URLSearchParams) payload = payload.toString();
+    if (MODO_APK) {
+      if (method === "POST") return Promise.resolve(String(Afline.httpPost(url, payload || "")));
+      return Promise.resolve(String(Afline.httpGet(url)));
+    }
+    var opts = { method: method, credentials: "include", signal: signal };
+    if (payload && method === "POST") opts.body = payload;
+    return fetch(url, opts).then(function (r) {
+      if (!r.ok) return r.text().then(function (t) { throw new Error(t); });
+      return r.text();
+    });
+  }
+
   var toastTimer = null;
   function showToast(msg) {
     var t = $("toast");
@@ -462,10 +478,15 @@
 
   function refreshCaptcha() {
     var img = $("captcha");
-    var url = api("captcha") + "?_=" + Date.now();
     $("word").value = "";
     $("word").focus();
 
+    if (typeof Afline !== "undefined" && Afline && Afline.captcha) {
+      img.src = Afline.captcha();
+      return;
+    }
+
+    var url = api("captcha") + "?_=" + Date.now();
     if (typeof Blob === "undefined" || typeof FileReader === "undefined") {
       img.src = url;
       return;
@@ -947,11 +968,7 @@
     var body = new URLSearchParams({ cod_cidade: v.cidade, mac: v.mac, word: v.word });
     if (MODO_DIRETO) body.set("btConsultar", "Consultar");
 
-    fetch(api("consulta"), { method: "POST", body: body, signal: ctrl.signal, credentials: "include" })
-      .then(function (r) {
-        if (!r.ok) return r.text().then(function (t) { throw new Error(t); });
-        return r.text();
-      })
+    transport("POST", api("consulta"), body, ctrl.signal)
       .then(function (text) {
         clearTimeout(watchdog);
         if (MODO_DIRETO) return handleDirectFlow(text);
@@ -997,7 +1014,7 @@
       return;
     }
     $("status").textContent = "Verificando resposta do portal (" + attempt + "/16)...";
-    return fetch(api("resultado?url=" + encodeURIComponent(follow)), { signal: ctrl.signal, credentials: "include" })
+    return transport("GET", api("resultado?url=" + encodeURIComponent(follow)), null, ctrl.signal)
       .then(function (r) { return r.json(); })
       .then(function (k) {
         var kind = k.kind || "dica";
@@ -1054,11 +1071,7 @@
       return;
     }
     $("status").textContent = "Verificando resposta do portal (" + attempt + "/16)...";
-    return fetch(api("resultado?url=" + encodeURIComponent(follow)), { signal: ctrl.signal, credentials: "include" })
-      .then(function (r) {
-        if (!r.ok) throw new Error("HTTP " + r.status + " do portal.");
-        return r.text();
-      })
+    return transport("GET", api("resultado?url=" + encodeURIComponent(follow)), null, ctrl.signal)
       .then(function (html) {
         var kind = directPageKind(html);
         if (kind === "dados") {
