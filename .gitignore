@@ -28,3 +28,4 @@ __pycache__/
 
 # -- SECRETS (nunca subir) --
 apk/android/worker_url.txt
+apk/android/assets/www/js/config.js

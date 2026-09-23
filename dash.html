@@ -330,10 +330,24 @@
   // com Static Assets na mesma origem). Para dash hospedada separada, informe
   // a URL do Worker, ex.: "https://afline-niveis.myuser.workers.dev/".
   // CONFIG pode ser injetada pelo build do APK (js/config.js).
+  // MODE_DIRETO=1: o APK/WebView fala DIRETO com o portal (o portal bloqueia
+  // IPs de datacenter e so aceita IP residencial; no celular/PC funciona).
   var API_BASE = (typeof CONFIG !== "undefined" && CONFIG && CONFIG.API_BASE_URL)
     ? CONFIG.API_BASE_URL.replace(/\/+$/, "")
     : "";
-  function api(path) { return API_BASE + path; }
+  var MODO_DIRETO = !!(typeof CONFIG !== "undefined" && CONFIG && CONFIG.MODO_DIRETO);
+  var PORTAL_BASE = "http://niveis.virtua.com.br";
+  function api(path) {
+    if (!MODO_DIRETO) return API_BASE + path;
+    if (path === "captcha") return PORTAL_BASE + "/freecap/freecap.php";
+    if (path.indexOf("consulta") === 0) return PORTAL_BASE + "/fr_esquerda.php";
+    if (path.indexOf("resultado?url=") === 0) {
+      var rurl = decodeURIComponent(path.slice("resultado?url=".length)).trim();
+      if (/^[a-z]+:\/\//i.test(rurl)) return rurl;
+      return PORTAL_BASE + (rurl.indexOf("/") === 0 ? rurl : "/" + rurl);
+    }
+    return PORTAL_BASE + path;
+  }
   function isJson(text) {
     var t = (text || "").replace(/^\s+|\s+$/g, "");
     return t.charAt(0) === "{" || t.charAt(0) === "[";
@@ -728,6 +742,7 @@
     }, 60000);
 
     var body = new URLSearchParams({ cod_cidade: v.cidade, mac: v.mac, word: v.word });
+    if (MODO_DIRETO) body.set("btConsultar", "Consultar");
 
     fetch(api("consulta"), { method: "POST", body: body, signal: ctrl.signal, credentials: "include" })
       .then(function (r) {
@@ -736,6 +751,7 @@
       })
       .then(function (text) {
         clearTimeout(watchdog);
+        if (MODO_DIRETO) return handleDirectFlow(text);
         if (isJson(text)) {
           return handleJsonFlow(JSON.parse(text));
         }
@@ -803,12 +819,72 @@
     });
   }
 
+  function directFollowUrl(html) {
+    var m = /window\s*\.\s*open\s*\(\s*["']([^"']*fr_direita[^"']*)["']/.exec(html);
+    if (m) return m[1].trim();
+    if (html.indexOf("fr_direita.php") >= 0) return "fr_direita.php";
+    return "";
+  }
+
+  function directPageKind(html) {
+    if (/boxTitulo|divSinais|th class="titulo"/i.test(html)) return "dados";
+    if (html.indexOf("mensagem_erro") >= 0) return "erro";
+    return "dica";
+  }
+
+  function handleDirectFlow(text) {
+    var follow = directFollowUrl(text);
+    if (!follow) {
+      renderResult(text);
+      return;
+    }
+    $("status").textContent = "Consulta aceita! Aguardando resposta do portal...";
+    return pollDirect(follow, [], 1);
+  }
+
+  function pollDirect(follow, alerts, attempt) {
+    if (attempt > 16) {
+      renderAlertsOnly(alerts, [
+        "Consulta aceita, mas o portal nao retornou dados para cidade/MAC informados " +
+        "(caso repita em seguida, aguarde o cooldown de 45s)."
+      ]);
+      return;
+    }
+    $("status").textContent = "Verificando resposta do portal (" + attempt + "/16)...";
+    return fetch(api("resultado?url=" + encodeURIComponent(follow)), { signal: ctrl.signal, credentials: "include" })
+      .then(function (r) {
+        if (!r.ok) throw new Error("HTTP " + r.status + " do portal.");
+        return r.text();
+      })
+      .then(function (html) {
+        var kind = directPageKind(html);
+        if (kind === "dados") {
+          renderResult(html);
+          return;
+        }
+        if (kind === "erro") {
+          renderResult(html);
+          return;
+        }
+        return waitThenPollDirect(follow, alerts, attempt);
+      })
+      .catch(function (e) {
+        if (!e || e.name !== "AbortError") throw e;
+      });
+  }
+
+  function waitThenPollDirect(follow, alerts, attempt) {
+    return new Promise(function (resolve) {
+      setTimeout(function () { resolve(pollDirect(follow, alerts, attempt + 1)); }, 3000);
+    });
+  }
+
   function renderAlertsOnly(alerts, extra) {
     var all = (alerts || []).concat(extra || []);
     $("resultCard").style.display = "";
     $("result").innerHTML =
       '<div class="error">' + all.map(escapeHtml).join("\n") + "</div>";
-    $("resultBackend").textContent = "(backend JSON/Worker)";
+    $("resultBackend").textContent = MODO_DIRETO ? "(portal direto)" : "(backend JSON/Worker)";
   }
 
   updateCooldown();

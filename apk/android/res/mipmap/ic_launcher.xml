@@ -25,10 +25,5 @@
     <!-- Ponto central (verde - sinal OK) -->
     <path
         android:fillColor="#22C55E"
-        android:pathData="M81.6 63 a9 9 0 1 0 0.1 0 Z" />
-    <circle
-        android:fillColor="#22C55E"
-        android:cx="82"
-        android:cy="63"
-        android:r="6" />
+        android:pathData="M82 57 a6 6 0 1 0 0 12 a6 6 0 1 0 0 -12 Z" />
 </vector>

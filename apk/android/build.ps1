@@ -32,11 +32,12 @@ $final    = Join-Path $android 'Afline-Niveis.apk'
 
 if (-not (Test-Path $www)) { throw "assets/www nao encontrado em $www" }
 
-# ---- URL do Worker Cloudflare ==
+# ---- URL de base (Worker Cloudflare OU portal direto) ==
 $urlFile = Join-Path $android 'worker_url.txt'
-if (-not (Test-Path $urlFile)) { throw "worker_url.txt nao encontrado. Coloque a URL publica do Worker (ex.: https://afline-niveis.<seu>.workers.dev) nesse arquivo." }
+if (-not (Test-Path $urlFile)) { throw "worker_url.txt nao encontrado. Coloque a URL publica do Worker (ex.: https://afline-niveis.<seu>.workers.dev) OU o portal (http://niveis.virtua.com.br)." }
 $baseUrl = (Get-Content $urlFile -Raw).Trim().TrimEnd('/')
-if ($baseUrl.Length -lt 15 -or $baseUrl -match 'YOUR_SUBDOMAIN|altere') { throw "worker_url.txt parece invalido (precisa da URL real do Worker deployado)." }
+if ($baseUrl.Length -lt 15 -or $baseUrl -match 'YOUR_SUBDOMAIN|altere') { throw "worker_url.txt parece invalido (precisa da URL real do Worker deployado ou do portal)." }
+$modoDireto = $baseUrl -notmatch 'workers\.dev'
 
 # ---- Versao ----
 Write-Host '== 0/8 versao automatica do build =='
@@ -48,7 +49,7 @@ $vNome = "1.$buildN"
 $vData = Get-Date -Format 'dd/MM/yyyy HH:mm'
 $vTxt  = "v$vNome (build $buildN - $vData)"
 Set-Content -Path $verFile -Value ([string]$buildN) -Encoding Ascii
-Write-Host "  versao: $vTxt - worker: $baseUrl"
+Write-Host "  versao: $vTxt - base: $baseUrl $(if ($modoDireto) {'[MODO DIRETO ao portal]'} else {'[via Worker]'})"
 
 # ---- Injeta CONFIG no web app ----
 Write-Host '== 1/8 config.js =='
@@ -57,7 +58,8 @@ $configJs = @"
 var CONFIG = {
   APP_VERSION: "$vNome",
   APP_NAME: "Afline Niveis",
-  API_BASE_URL: "$baseUrl"
+  API_BASE_URL: "$baseUrl",
+  MODO_DIRETO: $($(if ($modoDireto) {'true'} else {'false'}))
 };
 "@
 [System.IO.File]::WriteAllText((Join-Path $www 'js\config.js'), $configJs, (New-Object System.Text.UTF8Encoding($false)))
