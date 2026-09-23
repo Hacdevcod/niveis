@@ -1141,16 +1141,30 @@
   // Tesseract/OpenCV estao instalados. Nao disponivel em modo direto/APK nem no Worker.
   var autoStatus = $("autoStatus");
   var autoWrap = $("autoWrap");
+
+  function setAutoUI(on) {
+    var box = $("captcha").closest(".captcha-box");
+    var refreshBtn = $("btnRefresh");
+    var wordField = $("word").closest(".field");
+    box.style.display = on ? "none" : "";
+    refreshBtn.style.display = on ? "none" : "";
+    wordField.style.display = on ? "none" : "";
+    if (on) {
+      autoStatus.textContent = "OCR ativo — quem resolve o captcha e o servidor.";
+    } else {
+      autoStatus.textContent = "Digitacao manual ativa.";
+      refreshCaptcha();
+    }
+  }
+
   if (!MODO_DIRETO && !MODO_APK) {
     fetch(api("ocrstatus"), { credentials: "include" })
       .then(function (r) { return r.json(); })
       .then(function (j) {
         if (j && j.ocr) {
           autoWrap.style.display = "";
-          autoStatus.textContent = "OCR ativo — quem resolve o captcha e o servidor.";
           $("chkAuto").checked = true;
-          $("captcha").closest(".captcha-row").style.display = "none";
-          $("word").closest(".field").style.display = "none";
+          setAutoUI(true);
         } else {
           autoWrap.style.display = "";
           autoStatus.textContent = "OCR indisponivel neste servidor — digitacao manual.";
@@ -1163,9 +1177,7 @@
 
   var chkAuto = $("chkAuto");
   chkAuto.addEventListener("change", function () {
-    var on = chkAuto.checked;
-    $("captcha").closest(".captcha-row").style.display = on ? "none" : "";
-    $("word").closest(".field").style.display = on ? "none" : "";
+    setAutoUI(chkAuto.checked);
   });
 
   setTimeout(function () {
