@@ -129,8 +129,14 @@
   .btn-ghost { background: var(--panel3); color: var(--muted); border: 1px solid var(--border); }
   .btn-ghost:hover:not(:disabled) { color: var(--text); border-color: var(--blue); }
   .btn-sm { padding: 8px 13px; font-size: 12.5px; border-radius: 8px; }
-  .btn-spin svg { animation: spin 1s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
+  .btn-loading {
+    background: linear-gradient(135deg, var(--blue), var(--cyan));
+    animation: btnPulse 1.2s ease-in-out infinite;
+  }
+  @keyframes btnPulse {
+    0%, 100% { background: linear-gradient(135deg, var(--blue), var(--cyan)); box-shadow: 0 6px 20px rgba(18,183,240,.4); }
+    50% { background: linear-gradient(135deg, #0b6dbd, #17b2c9); box-shadow: 0 6px 30px rgba(18,183,240,.75); }
+  }
   .hint { font-size: 12px; color: var(--muted); margin-top: 12px; line-height: 1.55; }
   #status { font-size: 13px; min-height: 20px; margin-top: 12px; font-weight: 600; color: var(--muted); }
 
@@ -515,7 +521,7 @@
   function setBtn(label, spin) {
     var b = $("btnConsultar");
     $("btnConsultarTxt").textContent = label;
-    b.classList.toggle("btn-spin", !!spin);
+    b.classList.toggle("btn-loading", !!spin);
     b.disabled = label !== "Consultar";
   }
   var consulting = false;
