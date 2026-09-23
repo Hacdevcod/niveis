@@ -322,11 +322,32 @@
     <circle cx="110" cy="56" r="4" fill="#16d3f0"/>
   </svg>
   <div class="boot-brand">AFLINE<em style="font-style:normal;color:#16d3f0">.</em></div>
-  <div class="boot-sub">Sistema de Consulta de Niveis</div>
+  <div class="boot-sub" id="bootVer">Sistema de Consulta de Niveis</div>
   <div class="boot-leds"><i></i><i></i><i></i><i></i></div>
 </div>
 
 <main>
+  <div class="section-label">Agente de Sinais</div>
+  <div class="card" id="agentLive">
+    <div class="agent-head">
+      <svg class="ai" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 3v6c0 5-3.5 8.5-8 11-4.5-2.5-8-6-8-11V5z"/><path d="M9 12l2 2 4-4"/></svg>
+      <div class="at">Sinalizacao p/ tecnico/operador</div>
+      <div class="agent-badge ok">AGUARDANDO</div>
+    </div>
+    <div class="agent-grid">
+      <div class="agent-cell warn">
+        <div class="k">Sinal TX</div>
+        <div class="v">&mdash;</div>
+        <div class="m">Faixa de referencia: TX at&eacute; 45 dBmV <b>OK</b> &middot; 46-48 <b>amarelo</b> &middot; 50+ <b>vermelho</b>.</div>
+      </div>
+      <div class="agent-cell warn">
+        <div class="k">Sinal RX</div>
+        <div class="v">&mdash;</div>
+        <div class="m">Faixa de referencia: RX entre <b>-12 e +12 dBmV OK</b>. Acima ou fora: <b>verificar passivos internos ou tap no poste</b>.</div>
+      </div>
+    </div>
+  </div>
+
   <div class="section-label">Nova consulta</div>
   <div class="card">
     <div id="msg"></div>
@@ -434,9 +455,29 @@
   }
 
   function refreshCaptcha() {
-    $("captcha").src = api("captcha") + "?_=" + Date.now();
+    var img = $("captcha");
+    var url = api("captcha") + "?_=" + Date.now();
     $("word").value = "";
     $("word").focus();
+
+    if (typeof Blob === "undefined" || typeof FileReader === "undefined") {
+      img.src = url;
+      return;
+    }
+    fetch(url, { credentials: "include" })
+      .then(function (r) {
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return r.blob();
+      })
+      .then(function (blob) {
+        var reader = new FileReader();
+        reader.onload = function () { img.src = reader.result; };
+        reader.readAsDataURL(blob);
+      })
+      .catch(function (e) {
+        img.src = url;
+        showMsg("Nao foi possivel carregar o CAPTCHA: " + e.message);
+      });
   }
   $("captcha").addEventListener("click", refreshCaptcha);
   $("btnRefresh").addEventListener("click", refreshCaptcha);
@@ -661,7 +702,8 @@
   function agenteSinais(tables, boxes) {
     var txTxt = findSignal(tables, boxes, /sinal\s*tx/i);
     var rxTxt = findSignal(tables, boxes, /(sinal\s*rx|receive\s*power)/i);
-    if (txTxt === null && rxTxt === null) return "";
+    var hasSignal = txTxt !== null || rxTxt !== null;
+
     var tx = txTxt !== null ? numOf(txTxt) : null;
     var rx = rxTxt !== null ? numOf(rxTxt) : null;
 
@@ -682,23 +724,26 @@
     var overall = "ok";
     if (txCls === "crit" || rxCls === "crit") overall = "crit";
     else if (txCls === "warn" || rxCls === "warn") overall = "warn";
-    var badgeTxt = overall === "ok" ? "OK" : overall === "warn" ? "ATENCAO" : "CRITICO";
+    var badgeTxt = hasSignal ? (overall === "ok" ? "OK" : overall === "warn" ? "ATENCAO" : "CRITICO") : "AGUARDANDO";
 
-    var h = '<div class="agent">';
-    h += '<div class="agent-head">' +
+    var leadTx = tx !== null
+      ? '<div class="agent-cell ' + txCls + '"><div class="k">Sinal TX</div><div class="v">' + txVal + '<span class="u">dBmV</span></div><div class="m">' + txMsg + "</div></div>"
+      : '<div class="agent-cell warn"><div class="k">Sinal TX</div><div class="v">&mdash;</div><div class="m">Faixa de refer&ecirc;ncia: TX at&eacute; 45 dBmV <b>OK</b> &middot; 46-48 <b>amarelo</b> &middot; 50+ <b>vermelho</b>.</div></div>';
+    var leadRx = rx !== null
+      ? '<div class="agent-cell ' + rxCls + '"><div class="k">Sinal RX</div><div class="v">' + rxVal + '<span class="u">dBmV</span></div><div class="m">' + rxMsg + "</div></div>"
+      : '<div class="agent-cell warn"><div class="k">Sinal RX</div><div class="v">&mdash;</div><div class="m">Faixa de refer&ecirc;ncia: RX entre <b>-12 e +12 dBmV OK</b>. Acima ou fora: <b>verificar passivos internos ou tap no poste</b>.</div></div>';
+
+    var h = '<div class="agent-head">' +
       '<svg class="ai" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 3v6c0 5-3.5 8.5-8 11-4.5-2.5-8-6-8-11V5z"/><path d="M9 12l2 2 4-4"/></svg>' +
-      '<div class="at">Agente de Sinais</div>' +
+      '<div class="at">Sinalizacao p/ tecnico/operador</div>' +
       '<div class="agent-badge ' + overall + '">' + badgeTxt + "</div></div>";
-    h += '<div class="agent-grid">';
-    if (tx !== null) {
-      h += '<div class="agent-cell ' + txCls + '"><div class="k">Sinal TX</div><div class="v">' + txVal + '<span class="u">dBmV</span></div><div class="m">' + txMsg + "</div></div>";
+    h += '<div class="agent-grid">' + leadTx + leadRx + "</div>";
+    if (hasSignal) {
+      h += '<div class="agent-foot">Faixa de refer&ecirc;ncia: TX &le;45 dBmV &middot; RX entre -12 e +12 dBmV. Ajustes devem ser validados em campo pelo t&eacute;cnico/operador.</div>';
     }
-    if (rx !== null) {
-      h += '<div class="agent-cell ' + rxCls + '"><div class="k">Sinal RX</div><div class="v">' + rxVal + '<span class="u">dBmV</span></div><div class="m">' + rxMsg + "</div></div>";
-    }
-    h += "</div>";
-    h += '<div class="agent-foot">Faixa de refer&ecirc;ncia: TX &le;45 dBmV &middot; RX entre -12 e +12 dBmV. Ajustes devem ser validados em campo pelo t&eacute;cnico/operador.</div>';
-    h += "</div>";
+
+    var live = $("agentLive");
+    if (live) live.innerHTML = h;
     return h;
   }
 
@@ -1050,6 +1095,11 @@
       if (b) b.style.display = "none";
     }, 750);
   }, 2400);
+
+  var vEl = $("bootVer");
+  if (vEl && typeof CONFIG !== "undefined" && CONFIG && CONFIG.APP_VERSION) {
+    vEl.textContent += " · v" + CONFIG.APP_VERSION + (CONFIG.MODO_DIRETO ? " (portal direto)" : " (Worker)");
+  }
 })();
 </script>
 </body>
