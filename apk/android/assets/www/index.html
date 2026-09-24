@@ -298,6 +298,52 @@
   .agent-cell.warn .v { color: var(--yellow); }
   .agent-cell.crit .v { color: var(--red); }
   .agent-foot { margin-top: 12px; font-size: 12px; color: var(--muted); line-height: 1.5; padding-top: 10px; border-top: 1px dashed var(--border); }
+
+  /* ---- AGENTE DE CAMPO (bot com modem animado) ---- */
+  .agent-bot-card { display: flex; gap: 18px; align-items: stretch; flex-wrap: wrap; }
+  .bot-avatar {
+    flex: 0 0 200px; display: flex; flex-direction: column; align-items: center; gap: 8px;
+    padding: 16px 12px;
+    background: radial-gradient(340px 180px at 50% -10%, #0e1a2b, var(--panel) 70%);
+    border: 1px solid var(--border2); border-radius: 14px;
+  }
+  .bot-avatar svg.modem-mini {
+    width: 160px; height: auto;
+    filter: drop-shadow(0 14px 28px rgba(22,211,240,.16));
+    animation: bootPulse 2.4s ease-in-out infinite;
+  }
+  .bot-leds { display: flex; gap: 7px; margin-top: 2px; }
+  .bot-leds i { width: 8px; height: 8px; border-radius: 50%; opacity: .25; }
+  .bot-avatar.talking .bot-leds i { animation: ledBlink .9s infinite; }
+  .bot-leds i:nth-child(1) { background: var(--green); }
+  .bot-leds i:nth-child(2) { background: var(--cyan); }
+  .bot-leds i:nth-child(3) { background: var(--yellow); }
+  .bot-leds i:nth-child(4) { background: var(--blue); }
+  .bot-name {
+    font-size: 11px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase;
+    color: var(--muted); border: 1px solid var(--border); border-radius: 999px;
+    padding: 4px 12px; white-space: nowrap;
+  }
+  .bot-chat { flex: 1; min-width: 270px; display: flex; flex-direction: column; gap: 10px; justify-content: flex-start; }
+  .say {
+    align-self: flex-start; max-width: 88%;
+    background: var(--panel3); border: 1px solid var(--border); border-radius: 12px 12px 12px 3px;
+    padding: 10px 13px; font-size: 13.5px; line-height: 1.55;
+    opacity: 0; transform: translateY(6px); transition: opacity .35s ease, transform .35s ease;
+    white-space: pre-wrap;
+  }
+  .say.show { opacity: 1; transform: none; }
+  .say b { color: var(--cyan); }
+  .say.crit b { color: var(--red); }
+  .say.warn b { color: var(--yellow); }
+  .say.ok b { color: var(--green); }
+  .tag {
+    display: inline-block; font-size: 9.5px; font-weight: 800; letter-spacing: .1em;
+    color: var(--muted); border: 1px solid var(--border2); border-radius: 999px;
+    padding: 1px 8px; margin-right: 6px; text-transform: uppercase; vertical-align: 1px;
+  }
+  .bot-typing { display: inline-flex; gap: 4px; padding: 12px 14px; }
+  .bot-typing i { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); animation: ledBlink 1s infinite; }
 </style>
 </head>
 <body>
@@ -352,6 +398,31 @@
         <div class="v">&mdash;</div>
         <div class="m">Faixa de referencia: RX entre <b>-12 e +12 dBmV OK</b>. Acima ou fora: <b>verificar passivos internos ou tap no poste</b>.</div>
       </div>
+    </div>
+  </div>
+
+  <div class="section-label">Agente de Campo</div>
+  <div class="card agent-bot-card">
+    <div class="bot-avatar" id="botAvatar">
+      <svg class="modem-mini" viewBox="0 0 220 120" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <rect x="20" y="52" width="180" height="44" rx="14" fill="#16202d" stroke="#2e4058" stroke-width="3"/>
+        <rect x="20" y="52" width="180" height="18" rx="9" fill="#1b2736"/>
+        <circle cx="46" cy="78" r="5" fill="#33d96b"/>
+        <circle cx="66" cy="78" r="5" fill="#16d3f0"/>
+        <circle cx="86" cy="78" r="5" fill="#f5b842"/>
+        <circle cx="106" cy="78" r="5" fill="#2f9cf0"/>
+        <path d="M140 72h46" stroke="#223042" stroke-width="3" stroke-linecap="round"/>
+        <path d="M140 82h40" stroke="#223042" stroke-width="3" stroke-linecap="round"/>
+        <circle cx="196" cy="72" r="6" fill="#0d141d" stroke="#2e4058" stroke-width="2"/>
+        <path d="M84 36a34 34 0 0 1 52 0" stroke="#16d3f0" stroke-width="5" stroke-linecap="round"/>
+        <path d="M98 46a18 18 0 0 1 24 0" stroke="#16d3f0" stroke-width="5" stroke-linecap="round"/>
+        <circle cx="110" cy="56" r="4" fill="#16d3f0"/>
+      </svg>
+      <div class="bot-leds"><i></i><i></i><i></i><i></i></div>
+      <div class="bot-name">AGENTE HFC</div>
+    </div>
+    <div class="bot-chat">
+      <div id="botLog"></div>
     </div>
   </div>
 
@@ -780,7 +851,75 @@
 
     var live = $("agentLive");
     if (live) live.innerHTML = h;
+    agenteCampo(tx, rx, hasSignal);
     return h;
+  }
+
+  function botSay(text, cls, delayMs) {
+    return new Promise(function (resolve) {
+      setTimeout(function () {
+        var log = $("botLog");
+        if (!log) { resolve(); return; }
+        var b = document.createElement("div");
+        b.className = "say" + (cls ? " " + cls : "");
+        b.innerHTML = '<span class="bot-typing"><i></i><i></i><i></i></span>';
+        log.appendChild(b);
+        setTimeout(function () {
+          var i = 0;
+          b.innerHTML = "";
+          var iv = setInterval(function () {
+            b.textContent = text.slice(0, i);
+            b.classList.add("show");
+            i++;
+            if (i > text.length) { clearInterval(iv); resolve(); }
+          }, 22);
+        }, 620);
+      }, delayMs);
+    });
+  }
+
+  async function agenteCampo(tx, rx, hasSignal) {
+    var log = $("botLog");
+    var avatar = $("botAvatar");
+    if (!log) return;
+    log.innerHTML = "";
+    var msgs = [];
+    if (!hasSignal) {
+      msgs.push({ t: "Sem dados de sinal nesta consulta. O modulo do cliente nao devolveu TX/RX.", c: "" });
+      msgs.push({ t: "Verifique se o MAC retornou online e tente de novo apos o cooldown de 45s.", c: "" });
+    } else {
+      msgs.push({ t: "Analisando os niveis do modem...", c: "ok" });
+      if (tx !== null && tx > 50) {
+        msgs.push({ t: "Ops, esse nivel ta alto! TX " + fmtNum(tx) + " dBmV — marcado em VERMELHO.", c: "crit" });
+        msgs.push({ t: "Isso pode ser drop no caminho de retorno.", c: "" });
+        msgs.push({ t: "Quantos equipamentos tem na casa do cliente? Vamos analisar e distribuir o sinal.", c: "" });
+        msgs.push({ t: "Um atenuador de 6 dB no inicio pode deixar o TX em ~44 e o RX volta para a faixa.", c: "" });
+        msgs.push({ t: "Sabe o que vem do poste? Pode estar cortado ou com agua na caixa. Vamos fazer a preventiva.", c: "warn" });
+      } else if (tx !== null && tx >= 46) {
+        msgs.push({ t: "TX elevado: " + fmtNum(tx) + " dBmV (faixa 46-48). Sinal de subida acima do ideal.", c: "warn" });
+        msgs.push({ t: "Verificar atenuacao e passivos internos antes do modem.", c: "" });
+        msgs.push({ t: "Quantos equipamentos tem na casa? Vamos analisar e distribuir o sinal.", c: "" });
+      } else if (tx !== null) {
+        msgs.push({ t: "TX " + fmtNum(tx) + " dBmV: dentro da faixa ideal (ate 45). OK.", c: "ok" });
+      }
+      if (rx !== null && (rx <= -12 || rx >= 12)) {
+        if (rx < 0) {
+          msgs.push({ t: "RX " + fmtNum(rx) + " dBmV (negativo) — sinal vindo fraco do poste. Pode ser drop.", c: "crit" });
+          msgs.push({ t: "Cabo cortado ou agua na conexao pode derrubar o RX. Vamos fazer a preventiva.", c: "warn" });
+        } else {
+          msgs.push({ t: "RX " + fmtNum(rx) + " dBmV — sinal QUENTE de mais. Precisa atenuar.", c: "crit" });
+          msgs.push({ t: "Um DC (atenuador) ajusta e protege o modem. Distribua o sinal antes do RG.", c: "" });
+        }
+      } else if (rx !== null) {
+        msgs.push({ t: "RX " + fmtNum(rx) + " dBmV: dentro da faixa (-12 a +12). OK.", c: "ok" });
+      }
+      msgs.push({ t: "Faixa de referencia: TX ate 45 dBmV · RX entre -12 e +12 dBmV.", c: "" });
+    }
+    if (avatar) avatar.classList.add("talking");
+    for (var i = 0; i < msgs.length; i++) {
+      await botSay(msgs[i].t, msgs[i].c || "", 240);
+    }
+    if (avatar) avatar.classList.remove("talking");
   }
 
   function renderResult(html, extraAlerts) {
@@ -1113,6 +1252,30 @@
   updateCooldown();
   renderHistory();
   refreshCaptcha();
+
+  (function () {
+    var log = $("botLog");
+    var avatar = $("botAvatar");
+    if (!log) return;
+    var b = document.createElement("div");
+    b.className = "say show";
+    b.innerHTML = "Ola! Eu sou o <b>Agente HFC</b>. Faça uma consulta (cidade + MAC + CAPTCHA) que eu analiso os niveis TX/RX e dou as dicas do sinal ideal para o atendimento.";
+    log.appendChild(b);
+    if (avatar) avatar.classList.add("talking");
+    setTimeout(function () {
+      log.appendChild(botWelcomeTip());
+      setTimeout(function () {
+        if (avatar) avatar.classList.remove("talking");
+      }, 900);
+    }, 2200);
+  })();
+
+  function botWelcomeTip() {
+    var t = document.createElement("div");
+    t.className = "say warn show";
+    t.innerHTML = '<span class="tag">dica</span>Cor verde = sinal OK &middot; amarelo = atenção &middot; vermelho = crítico. Faixa de referência: TX at&eacute; 45 dBmV, RX entre -12 e +12 dBmV.';
+    return t;
+  }
 
   setTimeout(function () {
     var b = $("boot");
