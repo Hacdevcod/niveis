@@ -1,37 +1,17 @@
 @echo off
-REM Sobe o WATCHDOG (proxy + tunel + URL publica) em segundo plano.
-REM Ele abre uma janela minimizada "niveis-watchdog" - restaure-a para ver o
-REM terminal ao vivo, ou rode monitor.cmd. Nao duplica se ja estiver ativo.
+REM Inicia o WATCHDOG do Afline Niveis em 2o plano, de forma invisivel.
+REM Ele sobe o proxy (8777), o tunnel publico e publica a URL no Worker.
+REM Para ver o status em tempo real, rode monitor.cmd.
+REM Auto-inicio ao ligar o PC: o arquivo iniciar_watchdog.vbs ja esta na
+REM pasta Inicializar do Windows. Para desativar, apague-o de la.
 setlocal
 
 set "DIR=%~dp0"
-set "DIR=%DIR:~0,-1%"
-set "LOG_DIR=%TEMP%\opencode\tun"
-set "LOCK=%LOG_DIR%\watchdog.pid"
-if not exist "%LOG_DIR%" mkdir "%LOG_DIR%"
-
-set "WPID="
-if exist "%LOCK%" (
-  set /p WPID=<"%LOCK%"
-)
-
-set "RODANDO="
-if defined WPID (
-  tasklist /FI "PID eq %WPID%" 2>nul | findstr "%WPID%" >nul
-  if not errorlevel 1 set "RODANDO=1"
-)
-
-if defined RODANDO (
-  echo [ok] Watchdog ja rodando PID %WPID% - nada a fazer.
-) else (
-  echo [..] Iniciando watchdog em segundo plano - janela minimizada...
-  start "niveis-watchdog" /min cmd /k "cd /d ""%DIR%"" && python watchdog.py"
-  timeout /t 3 /nobreak >nul
-)
+wscript.exe "%DIR%iniciar_watchdog.vbs"
 
 echo.
-echo ===== ATIVO =====
+echo [ok] Watchdog iniciado em 2o plano - invisivel, sem janela.
 echo URL FIXA .....: https://afline-niveis.codw23.workers.dev/
-echo Terminal .....: restaure a janela "niveis-watchdog" ou rode monitor.cmd
+echo Status .......: monitor.cmd
 echo =================
 endlocal
