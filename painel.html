@@ -53,10 +53,6 @@
       <div class="val" id="p_proxy">?</div>
     </div>
     <div class="card">
-      <div class="lbl">OCR / CAPTCHA</div>
-      <div class="val" id="p_ocr">?</div>
-    </div>
-    <div class="card">
       <div class="lbl">Tunel publico</div>
       <div class="val" id="p_tunel">?</div>
     </div>
@@ -100,16 +96,13 @@
       const s = await r.json();
       const tunelUp = !!s.tunel_url;
       $("p_proxy").innerHTML = DOT.ok("ONLINE");
-      $("p_ocr").innerHTML = s.ocr ? DOT.ok("ATIVO") : DOT.warn("INDISPONIVEL");
       $("p_tunel").innerHTML = tunelUp ? DOT.ok("ONLINE") : DOT.warn("INICIANDO...");
       $("p_url").textContent = s.tunel_url || "aguardando URL...";
       $("p_url").style.color = tunelUp ? "#7fd8ff" : "#ffb020";
-      $("p_sistema").innerHTML = tunelUp && s.ocr ? DOT.ok("ONLINE")
-        : (tunelUp ? DOT.warn("PARCIAL") : DOT.bad("AQUECENDO"));
+      $("p_sistema").innerHTML = tunelUp ? DOT.ok("ONLINE") : DOT.warn("AQUECENDO");
     } catch (e) {
       $("p_sistema").innerHTML = DOT.bad("OFFLINE / SEM PROXY");
       $("p_proxy").innerHTML = DOT.bad("OFFLINE");
-      $("p_ocr").innerHTML = "?";
       $("p_tunel").innerHTML = "?";
       $("p_url").textContent = "sem conexao com o proxy local";
       $("p_url").style.color = "#ff5560";

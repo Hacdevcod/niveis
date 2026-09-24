@@ -2,7 +2,7 @@
 """Painel grande estilo relogio de ponto do Afline Niveis.
 
 Janela propria (tkinter) com hora gigante + status ao vivo do sistema
-(proxy, OCR, tunel, url atual). Atualiza a cada 10s via /painelstatus.
+(proxy, tunel, url atual). Atualiza a cada 10s via /painelstatus.
 
 Auto-inicio: lancado MINIMIZADO pelo iniciar_watchdog.vbs.
 Uso manual: abrir_painel.cmd (maximizado).
@@ -70,7 +70,6 @@ class Painel(tk.Tk):
         cards.pack(pady=25)
         self.c_sistema = self._card(cards, "SISTEMA")
         self.c_proxy = self._card(cards, "PROXY LOCAL (8777)")
-        self.c_ocr = self._card(cards, "OCR / CAPTCHA")
         self.c_tunel = self._card(cards, "TUNEL PUBLICO")
 
         urls = tk.Frame(self, bg=BG)
@@ -113,23 +112,15 @@ class Painel(tk.Tk):
         s = poll_status()
         if s:
             tunel = bool(s.get("tunel_url"))
-            ocr = bool(s.get("ocr"))
             self.c_proxy.config(text="ONLINE", fg=OK)
-            self.c_ocr.config(text="ATIVO" if ocr else "INDISP.", fg=OK if ocr else WARN)
             self.c_tunel.config(text="ONLINE" if tunel else "INICIANDO",
                                 fg=OK if tunel else WARN)
-            if tunel and ocr:
-                sistema, sc = "ONLINE", OK
-            elif tunel:
-                sistema, sc = "PARCIAL", WARN
-            else:
-                sistema, sc = "AQUECENDO", WARN
-            self.c_sistema.config(text=sistema, fg=sc)
+            self.c_sistema.config(text="ONLINE" if tunel else "AQUECENDO",
+                                  fg=OK if tunel else WARN)
             self.c_url.config(text=s.get("tunel_url") or "aguardando URL...",
                               fg=AZUL if tunel else WARN)
         else:
             self.c_proxy.config(text="OFFLINE", fg=BAD)
-            self.c_ocr.config(text="?", fg=BAD)
             self.c_tunel.config(text="?", fg=BAD)
             self.c_sistema.config(text="SEM PROXY", fg=BAD)
             self.c_url.config(text="sem conexao com o proxy local", fg=BAD)
