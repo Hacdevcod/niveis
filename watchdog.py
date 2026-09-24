@@ -18,6 +18,7 @@ import socket
 import subprocess
 import sys
 import time
+import json
 from pathlib import Path
 
 BASE = Path(__file__).resolve().parent
@@ -35,6 +36,8 @@ TOKEN_FILE = BASE / ".github_token"
 POLL = 10
 DETACHED = 0x00000008
 NEW_GROUP = 0x00000200
+CLOUDFLARED = r"C:\Program Files (x86)\cloudflared\cloudflared.exe"
+METRICS_URL = "http://127.0.0.1:20241/quicktunnel"
 
 
 def log(msg):
@@ -106,8 +109,13 @@ def tunnel_running():
 def start_tunnel():
     log("cloudflared offline -> iniciando tunel")
     try:
+        # Popen direto do binario (sem passar por .cmd) para garantir que o
+        # redirect stdout/stderr -> arquivo funcione mesmo com o processo
+        # desacoplado (DETACHED_PROCESS).
         subprocess.Popen(
-            ["cmd", "/c", str(START_TUNNEL)],
+            [CLOUDFLARED, "tunnel", "--url", "http://127.0.0.1:8777", "--no-autoupdate"],
+            stdout=open(OUT, "w"),
+            stderr=open(ERR, "w"),
             creationflags=DETACHED | NEW_GROUP,
             close_fds=True,
         )
@@ -125,6 +133,25 @@ def current_url():
         m = re.findall(r"https://[a-z0-9-]+\.trycloudflare\.com", txt, re.I)
         if m:
             url = m[-1]
+    if not url:
+        # Fallback: endpoint de metricas do cloudflared local
+        try:
+            with socket.create_connection(("127.0.0.1", 20241), 1.5) as s:
+                s.sendall(b"GET /quicktunnel HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n")
+                chunk = b""
+                while True:
+                    b = s.recv(4096)
+                    if not b:
+                        break
+                    chunk += b
+                    if len(chunk) > 20000:
+                        break
+            body = chunk.split(b"\r\n\r\n", 1)[-1]
+            rec = json.loads(body.decode("utf-8", "ignore"))
+            if "hostname" in rec:
+                url = "https://" + rec["hostname"]
+        except Exception:
+            pass
     return url
 
 
