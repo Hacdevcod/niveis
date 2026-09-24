@@ -20,8 +20,10 @@ public class JsBridge {
     }
 
     @JavascriptInterface
-    public String captcha() {
-        String url = "http://niveis.virtua.com.br/freecap/freecap.php";
+    public String captcha(String url) {
+        if (url == null || url.isEmpty()) {
+            url = "https://afline-niveis.codw23.workers.dev/captcha";
+        }
         try {
             HttpURLConnection c = open(url, "GET", null);
             InputStream in = c.getInputStream();

@@ -555,7 +555,7 @@
     $("word").focus();
 
     if (typeof Afline !== "undefined" && Afline && Afline.captcha) {
-      img.src = Afline.captcha();
+      img.src = Afline.captcha(api("captcha"));
       return;
     }
 
