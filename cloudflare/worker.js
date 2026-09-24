@@ -140,6 +140,23 @@ async function upstream(method, path, data, jar) {
   return { resp, raw, setCookies };
 }
 
+const LIVE_CACHE = { url: "", at: 0 };
+async function liveTunnelUrl(env, request) {
+  if (LIVE_CACHE.url && Date.now() - LIVE_CACHE.at < 60000) return LIVE_CACHE.url;
+  try {
+    const r = await env.ASSETS.fetch(new Request(new URL("/live-url.txt", request.url)));
+    if (r && r.ok) {
+      const t = (await r.text()).trim();
+      if (/^https:\/\/[a-z0-9-]+\.trycloudflare\.com\/?$/i.test(t)) {
+        LIVE_CACHE.url = t.replace(/\/+$/, "");
+        LIVE_CACHE.at = Date.now();
+        return LIVE_CACHE.url;
+      }
+    }
+  } catch (e) { /* sem tunel publicado */ }
+  return "";
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -168,6 +185,22 @@ export default {
 
     if (path === "/captcha" && request.method === "GET") {
       try {
+        const tunel = await liveTunnelUrl(env, request);
+        if (tunel) {
+          try {
+            const tr = await fetch(tunel + "/captcha", { method: "GET", cache: "no-store" });
+            if (tr && tr.ok) {
+              const raw = await tr.arrayBuffer();
+              return new Response(raw, {
+                status: tr.status,
+                headers: {
+                  "Content-Type": tr.headers.get("Content-Type") || "image/png",
+                  "Cache-Control": "no-store",
+                },
+              });
+            }
+          } catch (e) { /* segue para o upstream direto */ }
+        }
         const { resp, raw, setCookies } = await upstream("GET", "/freecap/freecap.php", null, jar);
         jar = mergeJar(jar, setCookies);
         const ctype = resp.headers.get("Content-Type") || "image/png";
@@ -182,6 +215,21 @@ export default {
 
     if (path === "/consulta" && request.method === "POST") {
       try {
+        const tunel = await liveTunnelUrl(env, request);
+        if (tunel) {
+          const rawBody = await request.text();
+          const tr = await fetch(tunel + "/consulta", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: rawBody,
+          });
+          const raw = await tr.arrayBuffer();
+          const ctype = tr.headers.get("Content-Type") || "text/html; charset=utf-8";
+          return new Response(raw, {
+            status: tr.status,
+            headers: { "Content-Type": ctype, "Cache-Control": "no-store" },
+          });
+        }
         const form = new URLSearchParams(await request.text());
         const data = {
           cod_cidade: form.get("cod_cidade") || "",
