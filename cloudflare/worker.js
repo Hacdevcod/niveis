@@ -240,7 +240,7 @@ export default {
     // watchdog). Se nao houver URL publicada, cai na dash estatica.
     if (path === "/" || path === "/index.html") {
       try {
-        const r = await env.ASSETS.fetch(new URL("/live-url.txt", request.url));
+        const r = await env.ASSETS.fetch(new Request(new URL("/live-url.txt", request.url)));
         if (r && r.ok) {
           const t = (await r.text()).trim();
           if (/^https:\/\/[a-z0-9-]+\.trycloudflare\.com\/?$/i.test(t)) {
