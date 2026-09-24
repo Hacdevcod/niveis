@@ -190,6 +190,7 @@ def auto_consulta(cod_cidade, mac):
                 word = ocr_read(img_bytes)
                 if not word:
                     ocr_errors += 1
+                    _dbg("auto sessao=%d ciclo=%d: OCR vazio (img=%dB)" % (sessao, ciclo, len(img_bytes)))
                     time.sleep(1.0)
                     continue
                 data = {
@@ -203,6 +204,7 @@ def auto_consulta(cod_cidade, mac):
                 with op.open(req2, timeout=TIMEOUT) as resp2:
                     a = resp2.read().decode("utf-8", "replace")
                 al = body_alerts(a)
+                _dbg("auto sessao=%d ciclo=%d word=%r alerts=%r" % (sessao, ciclo, word, al))
                 joined = " ".join(al).lower()
                 if "caracteres" in joined:
                     ocr_errors += 1

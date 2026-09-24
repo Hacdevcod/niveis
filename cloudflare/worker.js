@@ -236,6 +236,21 @@ export default {
       }
     }
 
+    // Entrada fixa: redireciona para o tunel vivo (URL dinâmica trocada pelo
+    // watchdog). Se nao houver URL publicada, cai na dash estatica.
+    if (path === "/" || path === "/index.html") {
+      try {
+        const r = await env.ASSETS.fetch(new URL("/live-url.txt", request.url));
+        if (r && r.ok) {
+          const t = (await r.text()).trim();
+          if (/^https:\/\/[a-z0-9-]+\.trycloudflare\.com\/?$/i.test(t)) {
+            const dst = t.endsWith("/") ? t : t + "/";
+            return Response.redirect(dst, 302);
+          }
+        }
+      } catch (e) { /* segue para a dash estatica */ }
+    }
+
     return env.ASSETS.fetch(request);
   },
 };
