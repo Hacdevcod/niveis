@@ -36,6 +36,7 @@ TOKEN_FILE = BASE / ".github_token"
 POLL = 10
 DETACHED = 0x00000008
 NEW_GROUP = 0x00000200
+NO_WINDOW = 0x08000000  # sem console/janela mesmo no auto-inicio (logon)
 CLOUDFLARED = r"C:\Program Files (x86)\cloudflared\cloudflared.exe"
 METRICS_URL = "http://127.0.0.1:20241/quicktunnel"
 
@@ -88,7 +89,7 @@ def start_proxy():
             cwd=str(BASE),
             stdout=open(TUN / "proxy.log", "a"),
             stderr=subprocess.STDOUT,
-            creationflags=DETACHED | NEW_GROUP,
+            creationflags=DETACHED | NEW_GROUP | NO_WINDOW,
             close_fds=True,
         )
     except Exception as e:
@@ -116,7 +117,7 @@ def start_tunnel():
             [CLOUDFLARED, "tunnel", "--url", "http://127.0.0.1:8777", "--no-autoupdate"],
             stdout=open(OUT, "w"),
             stderr=open(ERR, "w"),
-            creationflags=DETACHED | NEW_GROUP,
+            creationflags=DETACHED | NEW_GROUP | NO_WINDOW,
             close_fds=True,
         )
     except Exception as e:
