@@ -13,6 +13,7 @@ import sys
 import time
 import tkinter as tk
 import urllib.request
+import webbrowser
 
 MINIMIZED = "--minimized" in sys.argv
 BASE = "http://127.0.0.1:8777"
@@ -74,8 +75,11 @@ class Painel(tk.Tk):
 
         urls = tk.Frame(self, bg=BG)
         urls.pack()
+        self.cur_tunel = ""
         self.c_url = self._card(urls, "URL ATUAL DO TUNEL", 15)
         self.c_fixo = self._card(urls, "LINK FIXO (USE ESTE)", 15)
+        self._clickable(self.c_url)
+        self._clickable(self.c_fixo)
 
         self.upd_lbl = tk.Label(self,
                                 text="AFLINE NIVIES - desenvolvido por Israelson Diego Rodrigues Sevalho",
@@ -95,6 +99,21 @@ class Painel(tk.Tk):
         lbl = tk.Label(box, text="...", font=("Segoe UI", fonte, "bold"), fg=FG, bg=CARD)
         lbl.pack()
         return lbl
+
+    def _clickable(self, lbl):
+        lbl.config(cursor="hand2")
+        lbl.bind("<Button-1>", lambda e: self._open_url(lbl))
+
+    def _open_url(self, lbl):
+        if lbl is self.c_url:
+            url = self.cur_tunel
+        else:
+            url = URL_FIXA
+        if url and url.startswith("http"):
+            try:
+                webbrowser.open(url, new=2)
+            except Exception:
+                pass
 
     def clk(self):
         now = time.localtime()
@@ -119,6 +138,7 @@ class Painel(tk.Tk):
                                   fg=OK if tunel else WARN)
             self.c_url.config(text=s.get("tunel_url") or "aguardando URL...",
                               fg=AZUL if tunel else WARN)
+            self.cur_tunel = s.get("tunel_url") or ""
         else:
             self.c_proxy.config(text="OFFLINE", fg=BAD)
             self.c_tunel.config(text="?", fg=BAD)
