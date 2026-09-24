@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Afline Niveis - Monitor</title>
+<style>
+  :root { --ok:#1fdf8f; --warn:#ffb020; --bad:#ff5560; --bg:#0b0f14; --card:#11161d; --line:#1e2832; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html,body { height:100%; }
+  body {
+    background:var(--bg); color:#e8eef4; font-family:"Segoe UI",Arial,sans-serif;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:22px; padding:30px; overflow:hidden; user-select:none;
+  }
+  #relogio { text-align:center; line-height:1; }
+  #hora { font-size:15vh; font-weight:700; letter-spacing:2px; font-variant-numeric:tabular-nums;
+          text-shadow:0 0 30px rgba(31,223,143,.25); }
+  #data { margin-top:8px; font-size:3.2vh; color:#9fb2c3; }
+  .grid { display:flex; gap:16px; flex-wrap:wrap; justify-content:center; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px;
+          padding:16px 22px; min-width:220px; text-align:center; }
+  .card .lbl { font-size:14px; text-transform:uppercase; letter-spacing:2px; color:#7b8ea0; margin-bottom:6px; }
+  .card .val { font-size:34px; font-weight:700; word-break:break-all; }
+  .card.url .val { font-size:17px; line-height:1.35; }
+  .dot { display:inline-block; width:14px; height:14px; border-radius:50%; margin-right:8px;
+         vertical-align:middle; }
+  .ok { color:var(--ok); } .warn { color:var(--warn); } .bad { color:var(--bad); }
+  .dot.okb { background:var(--ok); box-shadow:0 0 12px var(--ok); }
+  .dot.warnb { background:var(--warn); box-shadow:0 0 12px var(--warn); }
+  .dot.badb { background:var(--bad); box-shadow:0 0 12px var(--bad); }
+  #rodape { position:fixed; bottom:12px; width:100%; text-align:center; font-size:13px;
+            color:#5f7284; opacity:.75; }
+  #rodape b { color:#cfe0ee; }
+  .pisca { animation:pisca 1.2s infinite; }
+  @keyframes pisca { 0%,100%{opacity:1} 50%{opacity:.35} }
+</style>
+</head>
+<body>
+
+  <div id="relogio">
+    <div id="hora">--:--:--</div>
+    <div id="data">carregando...</div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <div class="lbl">Sistema</div>
+      <div class="val" id="p_sistema">VERIFICANDO...</div>
+    </div>
+    <div class="card">
+      <div class="lbl">Proxy local (8777)</div>
+      <div class="val" id="p_proxy">?</div>
+    </div>
+    <div class="card">
+      <div class="lbl">OCR / CAPTCHA</div>
+      <div class="val" id="p_ocr">?</div>
+    </div>
+    <div class="card">
+      <div class="lbl">Tunel publico</div>
+      <div class="val" id="p_tunel">?</div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card url">
+      <div class="lbl">URL atual do tunel</div>
+      <div class="val" id="p_url">---</div>
+    </div>
+    <div class="card url">
+      <div class="lbl">Link fixo (use este)</div>
+      <div class="val" id="p_fixo">https://afline-niveis.codw23.workers.dev/</div>
+    </div>
+  </div>
+
+  <div id="rodape">AFLINE NIVIES &middot; desenvolvido por <b>Israelson Diego Rodrigues Sevalho</b>
+  &middot; atualizado <span id="p_upd">...</span></div>
+
+<script>
+  const $ = id => document.getElementById(id);
+  const DOT = {
+    ok:  s => '<span class="dot okb"></span><span class="ok">' + s + '</span>',
+    warn: s => '<span class="dot warnb"></span><span class="warn">' + s + '</span>',
+    bad: s => '<span class="dot badb"></span><span class="bad pisca">' + s + '</span>',
+  };
+
+  function relogio() {
+    const now = new Date();
+    const p2 = n => String(n).padStart(2, "0");
+    $("hora").textContent = p2(now.getHours()) + ":" + p2(now.getMinutes()) + ":" + p2(now.getSeconds());
+    const dias = ["Domingo","Segunda-feira","Terça-feira","Quarta-feira","Quinta-feira","Sexta-feira","Sábado"];
+    const meses = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
+    $("data").textContent = dias[now.getDay()] + ", " + now.getDate() + " de " + meses[now.getMonth()] + " de " + now.getFullYear();
+  }
+
+  async function status() {
+    try {
+      const r = await fetch("painelstatus", { cache: "no-store" });
+      if (!r.ok) throw new Error("http " + r.status);
+      const s = await r.json();
+      const tunelUp = !!s.tunel_url;
+      $("p_proxy").innerHTML = DOT.ok("ONLINE");
+      $("p_ocr").innerHTML = s.ocr ? DOT.ok("ATIVO") : DOT.warn("INDISPONIVEL");
+      $("p_tunel").innerHTML = tunelUp ? DOT.ok("ONLINE") : DOT.warn("INICIANDO...");
+      $("p_url").textContent = s.tunel_url || "aguardando URL...";
+      $("p_url").style.color = tunelUp ? "#7fd8ff" : "#ffb020";
+      $("p_sistema").innerHTML = tunelUp && s.ocr ? DOT.ok("ONLINE")
+        : (tunelUp ? DOT.warn("PARCIAL") : DOT.bad("AQUECENDO"));
+    } catch (e) {
+      $("p_sistema").innerHTML = DOT.bad("OFFLINE / SEM PROXY");
+      $("p_proxy").innerHTML = DOT.bad("OFFLINE");
+      $("p_ocr").innerHTML = "?";
+      $("p_tunel").innerHTML = "?";
+      $("p_url").textContent = "sem conexao com o proxy local";
+      $("p_url").style.color = "#ff5560";
+    }
+    $("p_upd").textContent = new Date().toLocaleTimeString("pt-BR");
+  }
+
+  relogio(); status();
+  setInterval(relogio, 1000);
+  setInterval(status, 10000);
+</script>
+</body>
+</html>

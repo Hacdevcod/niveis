@@ -33,6 +33,7 @@ PORT = 8777
 TIMEOUT = 25
 
 DASH_HTML = Path(__file__).with_name("dash.html")
+PAINEL_HTML = Path(__file__).with_name("painel.html")
 LOGO_IMG = Path(__file__).with_name("logo.jpg")
 LOGO_PNG = Path(__file__).with_name("logo.png")
 
@@ -319,6 +320,17 @@ class Handler(BaseHTTPRequestHandler):
                 self._send(code, ctype or "image/png", raw)
             except (HTTPError, URLError, TimeoutError) as e:
                 self._send(502, "text/plain; charset=utf-8", f"Erro ao obter captcha: {e}")
+        elif path == "/painel":
+            self._send(200, "text/html; charset=utf-8", PAINEL_HTML.read_text("utf-8"))
+        elif path == "/painelstatus":
+            tunel = ""
+            try:
+                _p = Path(__file__).with_name("cloudflare") / "public" / "live-url.txt"
+                tunel = _p.read_text(encoding="utf-8").strip()
+            except Exception:
+                pass
+            self._send(200, "application/json; charset=utf-8",
+                       safe_json({"proxy": True, "ocr": OCR_AVAILABLE, "tunel_url": tunel}))
         elif path == "/ocrstatus":
             self._send(200, "application/json; charset=utf-8",
                        '{"ocr": %s}' % ("true" if OCR_AVAILABLE else "false"))
