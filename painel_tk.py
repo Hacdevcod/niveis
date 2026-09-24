@@ -47,7 +47,9 @@ class Painel(tk.Tk):
         # Maximiza ao restaurar de minimizada (Tk nao tem evento Deiconify)
         self.bind("<Map>", lambda e: self.after(60, self._ensure_zoomed))
         if MINIMIZED:
+            self.withdraw()
             self.state("iconic")
+            self.after(300, lambda: self.state("iconic"))
         else:
             self.state("zoomed")
 
