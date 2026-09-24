@@ -57,6 +57,7 @@ def pid_alive(pid):
         out = subprocess.run(
             ["tasklist", "/FI", "PID eq %d" % pid],
             capture_output=True, text=True, timeout=10,
+            creationflags=subprocess.CREATE_NO_WINDOW,
         ).stdout
         return str(pid) in out
     except Exception:
@@ -101,6 +102,7 @@ def tunnel_running():
         out = subprocess.run(
             ["tasklist", "/FI", "IMAGENAME eq cloudflared.exe"],
             capture_output=True, text=True, timeout=10,
+            creationflags=subprocess.CREATE_NO_WINDOW,
         ).stdout
         return "cloudflared.exe" in out
     except Exception:
@@ -168,14 +170,17 @@ def push():
     remote = "https://Hacdevcod:%s@github.com/Hacdevcod/niveis.git" % token
     try:
         subprocess.run(["git", "add", "cloudflare/public/live-url.txt"],
-                       cwd=str(BASE), check=False, capture_output=True)
+                       cwd=str(BASE), check=False, capture_output=True,
+                       creationflags=subprocess.CREATE_NO_WINDOW)
         subprocess.run(
             ["git", "commit", "-m", "watchdog: update live tunnel URL", "--",
              "cloudflare/public/live-url.txt"],
             cwd=str(BASE), check=False, capture_output=True,
+            creationflags=subprocess.CREATE_NO_WINDOW,
         )
         r = subprocess.run(["git", "push", remote, "main"], cwd=str(BASE),
-                           capture_output=True, text=True, timeout=60)
+                           capture_output=True, text=True, timeout=60,
+                           creationflags=subprocess.CREATE_NO_WINDOW)
         if r.returncode == 0:
             log("push OK -> Worker atualiza em ~40s")
         else:
