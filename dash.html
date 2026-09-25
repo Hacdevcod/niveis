@@ -576,14 +576,14 @@
       })
       .catch(function (e) {
         img.src = url;
-        var msg = e && e.message ? e.message : "erro desconhecido";
-        if (/502|ETIMEDOUT|timed out|Failed to fetch/i.test(msg)) {
-          msg = "O portal de Niveis (niveis.virtua.com.br) esta sem resposta no momento " +
-                "(fora do ar ou bloqueando esta conexao). Tente novamente em alguns instantes.";
+        var msg = e && e.message ? e.message : "";
+        if (!msg || /502|503|504|ETIMEDOUT|timed out|timeout|Failed to fetch|NetworkError|Network request failed/i.test(msg)) {
+          showMsg("Nao foi possivel carregar o CAPTCHA: o portal de Niveis (niveis.virtua.com.br) esta sem resposta no momento (fora do ar ou bloqueando esta conexao). Tente novamente em alguns instantes.");
+          agentePortalFora();
         } else {
           msg = msg.replace(/^.*?fetch\s*\(\)\s*:\s*/i, "");
+          showMsg("Nao foi possivel carregar o CAPTCHA: " + msg);
         }
-        showMsg("Nao foi possivel carregar o CAPTCHA: " + msg);
       });
   }
   $("captcha").addEventListener("click", refreshCaptcha);
@@ -922,6 +922,25 @@
     if (avatar) avatar.classList.remove("talking");
   }
 
+  function agentePortalFora() {
+    var log = $("botLog");
+    var avatar = $("botAvatar");
+    if (!log) return;
+    log.innerHTML = "";
+    var msgs = [
+      { t: "Ops, o portal de Niveis (niveis.virtua.com.br) esta sem resposta no momento.", c: "crit" },
+      { t: "Pode estar fora do ar ou bloqueando esta conexao. Vamos aguardar e tentar novamente em alguns instantes.", c: "warn" },
+      { t: "Assim que o portal voltar, o CAPTCHA e a consulta voltam a funcionar sozinhos.", c: "ok" }
+    ];
+    if (avatar) avatar.classList.add("talking");
+    msgs.forEach(function (m, i) {
+      setTimeout(function () {
+        botSay(m.t, m.c || "", 0);
+        if (i === msgs.length - 1) setTimeout(function () { avatar.classList.remove("talking"); }, 300);
+      }, i * 900);
+    });
+  }
+
   function renderResult(html, extraAlerts) {
     var doc = new DOMParser().parseFromString(html, "text/html");
     var alerts = extractAlerts(doc);
@@ -1129,7 +1148,13 @@
         localStorage.removeItem(LOCK_KEY);
         updateCooldown();
         if (e && e.name === "AbortError") return;
-        showMsg("Falha na consulta: " + e.message);
+        var msg = (e && e.message) ? e.message : "";
+        if (!msg || /502|503|504|bad gateway|bad_gateway|ETIMEDOUT|timed out|timeout|Failed to fetch|NetworkError|Network request failed/i.test(msg)) {
+          showMsg("Falha na consulta: o portal de Niveis (niveis.virtua.com.br) esta sem resposta no momento (fora do ar ou bloqueando esta conexao). Aguarde alguns instantes e tente de novo.");
+          agentePortalFora();
+        } else {
+          showMsg("Falha na consulta: " + msg);
+        }
       })
       .finally(function () { consulting = false; updateCooldown(); });
   });
