@@ -510,7 +510,7 @@
   var MODO_APK = typeof Afline !== "undefined" && !!Afline;
   var PORTAL_BASE = "http://niveis.virtua.com.br";
   function api(path) {
-    if (!MODO_DIRETO) return API_BASE + path;
+    if (!MODO_DIRETO) return API_BASE + "/" + path;
     if (path === "captcha") return PORTAL_BASE + "/freecap/freecap.php";
     if (path.indexOf("consulta") === 0) return PORTAL_BASE + "/fr_esquerda.php";
     if (path.indexOf("resultado?url=") === 0) {
