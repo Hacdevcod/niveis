@@ -24,6 +24,7 @@ PORT = 8777
 TIMEOUT = 25
 
 DASH_HTML = Path(__file__).with_name("dash.html")
+TAP_HTML = Path(__file__).with_name("tap.html")
 PAINEL_HTML = Path(__file__).with_name("painel.html")
 LOGO_IMG = Path(__file__).with_name("logo.jpg")
 LOGO_PNG = Path(__file__).with_name("logo.png")
@@ -159,6 +160,8 @@ class Handler(BaseHTTPRequestHandler):
         path = self.path.split("?", 1)[0]
         if path in ("/", "/index.html"):
             self._send(200, "text/html; charset=utf-8", DASH_HTML.read_text("utf-8"))
+        elif path in ("/tap", "/tap.html"):
+            self._send(200, "text/html; charset=utf-8", TAP_HTML.read_text("utf-8"))
         elif path == "/logo":
             try:
                 if LOGO_PNG.exists():

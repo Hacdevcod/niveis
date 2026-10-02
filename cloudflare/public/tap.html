@@ -1,0 +1,1581 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Consulta de Níveis · AFLine</title>
+<style>
+  :root{
+    --bg: #0a0e13;
+    --panel: #131a22;
+    --panel-2: #182029;
+    --line: #232c37;
+    --pink: #ec1a63;
+    --blue: #2f7ce0;
+    --text: #e8edf2;
+    --text-dim: #8b98a5;
+    --ok: #35c96b;
+    --warn: #e0a72f;
+    --bad: #e0473f;
+    --mono: 'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace;
+    --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--sans);
+    -webkit-tap-highlight-color: transparent;
+    padding-bottom:40px;
+  }
+  header{
+    padding:22px 18px 16px;
+    border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg, #0d1218, var(--bg));
+  }
+  .eyebrow{
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--pink);
+    margin:0 0 6px;
+  }
+  h1{ margin:0; font-size:21px; font-weight:700; letter-spacing:-.01em; }
+  .sub{ margin:4px 0 0; font-size:13px; color:var(--text-dim); }
+
+  main{ padding:16px; max-width:640px; margin:0 auto; }
+
+  .tab-bar{
+    display:flex;
+    gap:8px;
+    margin-bottom:20px;
+    position:sticky;
+    top:0;
+    background:var(--bg);
+    padding:10px 0;
+    z-index:10;
+  }
+  .tab-btn{
+    flex:1;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:10px;
+    color:var(--text-dim);
+    font-family:var(--mono);
+    font-size:12px;
+    font-weight:700;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    padding:12px 8px;
+    cursor:pointer;
+    transition:all .15s;
+  }
+  .tab-btn.active{
+    background:var(--pink);
+    border-color:var(--pink);
+    color:#fff;
+  }
+  .tab-content{ display:none; }
+  .tab-content.active{ display:block; }
+
+  .refs{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px; }
+  .ref-card{ background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:12px; }
+  .ref-card h3{ margin:0 0 8px; font-size:11.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--text-dim); font-weight:600; }
+  .ref-row{ display:flex; justify-content:space-between; font-family:var(--mono); font-size:12.5px; padding:2px 0; }
+  .ref-row span:first-child{ color:var(--text-dim); }
+  .ref-row b{ color:var(--text); font-weight:600; }
+  .ref-card .tx-line{ color:var(--pink); }
+
+  .section-label{ font-family:var(--mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--text-dim); margin:0 0 10px; }
+
+  .taps{ display:flex; flex-wrap:wrap; gap:10px; margin-bottom:18px; }
+  .tap-btn{
+    flex:1 1 auto; min-width:70px; height:64px;
+    border:2px solid var(--line); background:var(--panel); color:var(--text);
+    font-family:var(--mono); font-size:19px; font-weight:700;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; transition:box-shadow .15s, transform .1s;
+  }
+  .tap-btn:active{ transform:scale(.96); }
+  .tap-btn.shape-circle{ border-radius:50%; aspect-ratio:1; flex:0 0 64px; }
+  .tap-btn.shape-square{ border-radius:8px; }
+  .tap-btn.shape-hex{ border-radius:10px; clip-path: polygon(25% 6%, 75% 6%, 100% 50%, 75% 94%, 25% 94%, 0% 50%); }
+  .tap-btn.selected{ box-shadow: 0 0 0 3px rgba(47,124,224,.55), 0 0 14px rgba(47,124,224,.35); transform: scale(1.04); }
+
+  .legend{ display:flex; gap:14px; flex-wrap:wrap; font-size:11.5px; color:var(--text-dim); margin-bottom:18px; font-family:var(--mono); }
+  .legend span{ display:inline-flex; align-items:center; gap:6px; }
+  .legend i{ width:12px; height:12px; border:1.5px solid var(--text-dim); display:inline-block; }
+  .legend i.circle{ border-radius:50%; }
+  .legend i.square{ border-radius:3px; }
+  .legend i.hex{ clip-path: polygon(25% 6%, 75% 6%, 100% 50%, 75% 94%, 25% 94%, 0% 50%); border-radius:3px;}
+
+  .color-legend{ display:grid; grid-template-columns:1fr 1fr; gap:8px 14px; margin-bottom:22px; }
+  .color-item{ display:flex; align-items:center; gap:8px; font-family:var(--mono); font-size:12px; color:var(--text-dim); }
+  .color-item i{ width:14px; height:14px; border-radius:50%; border:1px solid rgba(255,255,255,.25); flex-shrink:0; }
+
+  .result{ background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:20px; margin-bottom:20px; }
+  .result-top{ display:flex; align-items:baseline; justify-content:space-between; margin-bottom:14px; }
+  .result-top .tap-id{ font-family:var(--mono); font-size:13px; color:var(--text-dim); }
+  .result-top .tap-id b{ color:var(--pink); font-size:15px; }
+  .swatch{ display:inline-block; width:11px; height:11px; border-radius:50%; border:1px solid rgba(255,255,255,.3); margin-right:6px; vertical-align:middle; }
+  .saidas-tag{ font-family:var(--mono); font-size:11px; color:var(--text-dim); border:1px solid var(--line); border-radius:20px; padding:3px 10px; }
+  .tx-big{ font-family:var(--mono); font-size:52px; font-weight:700; color:var(--text); line-height:1; letter-spacing:-.01em; }
+  .tx-big span{ font-size:20px; color:var(--text-dim); font-weight:500; margin-left:4px;}
+  .tx-label{ font-size:12px; color:var(--text-dim); margin-top:4px; letter-spacing:.03em; }
+
+  .ladder-wrap{ margin-top:22px; }
+  .ladder{ display:flex; align-items:center; overflow-x:auto; padding:10px 2px 4px; gap:0; }
+  .rung{ display:flex; flex-direction:column; align-items:center; flex:0 0 auto; width:52px; position:relative; }
+  .rung .dot{ width:14px;height:14px;border-radius:50%; background:var(--line); border:2px solid var(--text-dim); z-index:2; }
+  .rung.active .dot{ box-shadow:0 0 0 4px rgba(47,124,224,.35); transform: scale(1.2); }
+  .rung .num{ font-family:var(--mono); font-size:10px; color:var(--text-dim); margin-top:6px; }
+  .rung.active .num{ color:var(--blue); font-weight:700; }
+  .connector{ flex:1 1 auto; height:2px; background:var(--line); min-width:14px; margin-top:-16px; }
+
+  .check{ background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px; margin-bottom:20px; }
+  .check h3{ margin:0 0 14px; font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-dim); font-weight:600; }
+  .field{ display:flex; flex-direction:column; gap:6px; }
+  .field label{ font-family:var(--mono); font-size:10.5px; color:var(--text-dim); letter-spacing:.03em; }
+  .field input, select{
+    background:var(--panel-2); border:1px solid var(--line); border-radius:8px;
+    padding:11px 12px; color:var(--text); font-family:var(--mono); font-size:15px; outline:none; width:100%;
+  }
+  .field input:focus, select:focus{ border-color:var(--blue); }
+  select{ flex:1; appearance:none; -webkit-appearance:none; }
+  .check-row{ display:flex; gap:10px; align-items:center; }
+  .add-btn{
+    background:var(--pink); color:#fff; border:none; border-radius:8px; padding:10px 14px;
+    font-family:var(--mono); font-size:13px; font-weight:700; white-space:nowrap; cursor:pointer;
+  }
+  .add-btn:active{ opacity:.8; }
+
+  .check-status{
+    margin-top:10px; font-family:var(--mono); font-size:13px; display:none;
+    align-items:center; gap:8px; padding:10px 12px; border-radius:8px;
+  }
+  .check-status.show{ display:flex; }
+  .check-status.ok{ background:rgba(53,201,107,.12); color:var(--ok); }
+  .check-status.warn{ background:rgba(224,167,47,.12); color:var(--warn); }
+  .check-status.bad{ background:rgba(224,71,63,.12); color:var(--bad); }
+
+  .eq-box{ margin-top:16px; border-top:1px solid var(--line); padding-top:14px; }
+  .eq-row{ display:flex; justify-content:space-between; align-items:baseline; font-family:var(--mono); }
+  .eq-row span{ font-size:12px; color:var(--text-dim); }
+  .eq-row b{ font-size:20px; color:var(--text); }
+  .eq-note{ font-family:var(--mono); font-size:10.5px; color:var(--text-dim); margin-top:2px; }
+  .toggle-btn{
+    background:none;
+    border:none;
+    color:var(--text-dim);
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    padding:0;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .toggle-btn:active{ opacity:.7; }
+
+  .passivo-list{ margin-top:12px; display:flex; flex-direction:column; gap:8px; }
+  .passivo-item{
+    display:flex; justify-content:space-between; align-items:center;
+    background:var(--panel-2); border:1px solid var(--line); border-radius:8px;
+    padding:9px 12px; font-family:var(--mono); font-size:12.5px;
+  }
+  .passivo-item .pname{ color:var(--text); }
+  .passivo-item .pval{ color:var(--text-dim); margin-left:8px; }
+  .passivo-item .premove{ background:none; border:none; color:var(--bad); font-size:16px; line-height:1; cursor:pointer; padding:2px 4px; }
+
+  .calc{ background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px; margin-bottom:10px; }
+  .calc-hint{ font-size:12px; color:var(--text-dim); margin:0 0 14px; line-height:1.5; }
+  .calc-inputs{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+  .calc-summary{ margin-top:16px; border-top:1px solid var(--line); padding-top:12px; }
+  .calc-row{ display:flex; justify-content:space-between; font-family:var(--mono); font-size:12.5px; color:var(--text-dim); padding:3px 0; }
+  .calc-row b{ color:var(--text); font-weight:600; }
+  .calc-row.total{ margin-top:4px; }
+  .calc-row.total span{ color:var(--text); font-weight:600; }
+  .calc-row.total b{ color:var(--pink); }
+
+  .calc-results{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:16px; }
+  .calc-result-card{ background:var(--panel-2); border:1px solid var(--line); border-radius:10px; padding:14px; text-align:center; }
+  .crc-label{ font-family:var(--mono); font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--text-dim); margin-bottom:6px; }
+  .crc-value{ font-family:var(--mono); font-size:26px; font-weight:700; color:var(--text); }
+  .crc-value span{ font-size:13px; color:var(--text-dim); font-weight:500; }
+  .crc-range{ font-family:var(--mono); font-size:10px; color:var(--text-dim); margin-top:6px; }
+  .crc-status{ font-family:var(--mono); font-size:11px; font-weight:700; margin-top:6px; min-height:14px; }
+  .crc-status.ok{ color:var(--ok); }
+  .crc-status.bad{ color:var(--bad); }
+  .calc-result-card.ok{ border-color: rgba(53,201,107,.4); }
+  .calc-result-card.bad{ border-color: rgba(224,71,63,.5); }
+
+  @media (max-width:400px){
+    .calc-inputs{ grid-template-columns:1fr 1fr; }
+    .calc-inputs .field:last-child{ grid-column: span 2; }
+  }
+
+  .mp-point{
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:14px;
+    margin-bottom:14px;
+  }
+  .mp-point-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:10px;
+    margin-bottom:12px;
+  }
+  .mp-point-head input{
+    background:transparent;
+    border:none;
+    border-bottom:1px solid var(--line);
+    color:var(--text);
+    font-family:var(--mono);
+    font-weight:700;
+    font-size:15px;
+    padding:4px 2px;
+    outline:none;
+    flex:1;
+  }
+  .mp-point-head input:focus{ border-color:var(--blue); }
+  .mp-remove{
+    background:none;
+    border:none;
+    color:var(--bad);
+    font-size:18px;
+    line-height:1;
+    cursor:pointer;
+    padding:2px 6px;
+  }
+  .mp-row{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px; }
+  .mp-passivo-row{ display:flex; gap:8px; margin-bottom:10px; }
+  .mp-results{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+    margin-top:10px;
+  }
+  .mp-result{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:10px;
+    text-align:center;
+  }
+  .mp-result .lbl{ font-family:var(--mono); font-size:10px; color:var(--text-dim); text-transform:uppercase; }
+  .mp-result .val{ font-family:var(--mono); font-size:20px; font-weight:700; color:var(--text); margin-top:2px; }
+  .mp-result.ok{ border-color: rgba(53,201,107,.4); }
+  .mp-result.bad{ border-color: rgba(224,71,63,.5); }
+  .mp-diag{
+    grid-column: span 2;
+    font-family:var(--mono);
+    font-size:11.5px;
+    padding:9px 10px;
+    border-radius:8px;
+    margin-top:2px;
+  }
+  .mp-diag.ok{ background:rgba(53,201,107,.12); color:var(--ok); }
+  .mp-diag.warn{ background:rgba(224,167,47,.12); color:var(--warn); }
+  .mp-diag.bad{ background:rgba(224,71,63,.12); color:var(--bad); }
+
+  .mp-table-wrap{ overflow-x:auto; }
+  .mp-table{ width:100%; border-collapse:collapse; font-family:var(--mono); font-size:12px; }
+  .mp-table th, .mp-table td{ padding:8px 10px; border-bottom:1px solid var(--line); text-align:left; white-space:nowrap; }
+  .mp-table th{ color:var(--text-dim); font-weight:600; text-transform:uppercase; font-size:10.5px; }
+  .mp-table td{ color:var(--text); }
+  .mp-table td.tag-ok{ color:var(--ok); }
+  .mp-table td.tag-warn{ color:var(--warn); }
+  .mp-table td.tag-bad{ color:var(--bad); }
+
+  .casc-chain{ margin-top:14px; display:flex; flex-direction:column; gap:0; }
+  .casc-item{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:10px 12px;
+    font-family:var(--mono);
+    font-size:12px;
+    position:relative;
+  }
+  .casc-item + .casc-item{ margin-top:14px; }
+  .casc-item + .casc-item::before{
+    content:'';
+    position:absolute;
+    top:-15px;
+    left:22px;
+    width:2px;
+    height:15px;
+    background:var(--line);
+  }
+  .casc-item .c-idx{
+    width:22px; height:22px;
+    border-radius:50%;
+    background:var(--pink);
+    color:#fff;
+    font-weight:700;
+    font-size:11px;
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0;
+  }
+  .casc-item .c-name{ color:var(--text); flex:1; }
+  .casc-item .c-db{ color:var(--text-dim); }
+  .casc-item .c-levels{ color:var(--blue); font-size:11px; white-space:nowrap; }
+  .casc-item .c-remove{ background:none; border:none; color:var(--bad); font-size:16px; cursor:pointer; padding:2px 4px; }
+  .casc-sub{
+    margin-left:26px;
+    border-style:dashed;
+    background:rgba(47,124,224,.06);
+  }
+  .casc-sub .sub-nome{
+    background:transparent;
+    border:none;
+    border-bottom:1px dashed var(--line);
+    color:var(--text);
+    font-family:var(--mono);
+    font-size:12px;
+    font-weight:700;
+    padding:2px;
+    outline:none;
+    width:70px;
+    flex:1;
+  }
+  .casc-sub .sub-cabo{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:6px;
+    color:var(--text);
+    font-family:var(--mono);
+    font-size:12px;
+    padding:5px 6px;
+    outline:none;
+  }
+
+  footer{ text-align:center; color:var(--text-dim); font-size:11px; font-family:var(--mono); margin-top:26px; padding:0 16px; }
+</style>
+</head>
+<body>
+
+<header>
+  <p class="eyebrow">AF Line · Regional Norte</p>
+  <h1>Consulta de Níveis por TAP</h1>
+  <p class="sub">Padronização de alinhamento em 1GHz · SA6940/GS7000 · BAL/HGD/LINE <a href="index.html" style="color:var(--pink);text-decoration:none;font-weight:700">&larr; Voltar à dash</a></p>
+</header>
+
+<main>
+
+
+  <div class="refs">
+    <div class="ref-card">
+      <h3>Saída Transceptor</h3>
+      <div class="ref-row"><span>Alto</span><b>49 dBmV</b></div>
+      <div class="ref-row"><span>Baixo</span><b>38 dBmV</b></div>
+      <div class="ref-row"><span>RX</span><b>~38 dBmV</b></div>
+      <div class="ref-row tx-line"><span>TX</span><b>42 dBmV</b></div>
+    </div>
+    <div class="ref-card">
+      <h3>Saída Amplificador</h3>
+      <div class="ref-row"><span>Alto</span><b>49 dBmV</b></div>
+      <div class="ref-row"><span>Baixo</span><b>38 dBmV</b></div>
+      <div class="ref-row"><span>RX</span><b>~38 dBmV</b></div>
+      <div class="ref-row tx-line"><span>TX</span><b>40 dBmV</b></div>
+    </div>
+  </div>
+
+  <p class="section-label">Selecione o TAP</p>
+  <div class="taps" id="tapGrid"></div>
+
+  <div class="legend">
+    <span><i class="circle"></i> Círculo — 2 saídas</span>
+    <span><i class="square"></i> Quadrado — 4 saídas</span>
+    <span><i class="hex"></i> Hexágono — 8 saídas</span>
+  </div>
+
+  <p class="section-label">Cor física do TAP</p>
+  <div class="color-legend" id="colorLegend"></div>
+
+  <div class="result" id="result">
+    <div class="result-top">
+      <div class="tap-id"><i class="swatch" id="rSwatch"></i>TAP <b id="rTap">—</b> <span id="rColorName" style="color:var(--text-dim); font-weight:400;"></span></div>
+      <div class="saidas-tag" id="rSaidas">— saídas</div>
+    </div>
+    <div class="tx-big" id="rTx">— <span>dBmV</span></div>
+    <div class="tx-label">TX esperado neste ponto da cadeia</div>
+
+    <div class="ladder-wrap">
+      <p class="section-label" style="margin-bottom:8px;">Posição na cadeia</p>
+      <div class="ladder" id="ladder"></div>
+    </div>
+  </div>
+
+
+  <div class="tab-bar">
+    <button class="tab-btn active" data-tab="tabInstalacao">Instalação</button>
+    <button class="tab-btn" data-tab="tabManutencao">Manutenção</button>
+  </div>
+
+
+  <div class="tab-content active" id="tabInstalacao">
+  <p class="section-label" style="margin-top:26px;">Calculadora TX/RX da instalação</p>
+  <div class="calc">
+
+    <div class="calc-inputs">
+      <div class="field">
+        <label>TX inicial (dBmV)</label>
+        <input type="number" step="0.1" inputmode="decimal" id="txInicial" placeholder="ex: 40">
+      </div>
+      <div class="field">
+        <label>RX inicial (dBmV)</label>
+        <input type="number" step="0.1" inputmode="decimal" id="rxInicial" placeholder="ex: 10">
+      </div>
+      <div class="field">
+        <label>Cabo (metros)</label>
+        <input type="number" step="0.1" inputmode="decimal" id="cabometros" placeholder="ex: 10">
+      </div>
+    </div>
+
+    <div class="field" style="margin-top:12px;">
+      <label>Adicionar passivo</label>
+      <div class="check-row">
+        <select id="passivoSelect">
+          <option value="">Selecione…</option>
+        </select>
+        <button id="addPassivo" class="add-btn">+ Adicionar</button>
+      </div>
+    </div>
+
+    <div class="passivo-list" id="passivoList"></div>
+
+    <div class="calc-summary" id="calcSummary">
+      <div class="calc-row">
+        <span>Perda do cabo</span>
+        <b id="sumCabo">0,0 dB</b>
+      </div>
+      <div class="calc-row">
+        <span>Perda dos passivos</span>
+        <b id="sumPassivos">0,0 dB</b>
+      </div>
+      <div class="calc-row total">
+        <span>Atenuação total</span>
+        <b id="sumTotal">0,0 dB</b>
+      </div>
+    </div>
+
+    <div class="calc-results">
+      <div class="calc-result-card">
+        <div class="crc-label">TX final</div>
+        <div class="crc-value" id="txFinal">— <span>dBmV</span></div>
+        <div class="crc-range">Padrão Claro: 38 a 51 dBmV</div>
+        <div class="crc-status" id="txStatus"></div>
+      </div>
+      <div class="calc-result-card">
+        <div class="crc-label">RX final</div>
+        <div class="crc-value" id="rxFinal">— <span>dBmV</span></div>
+        <div class="crc-range">Padrão Claro: -10 a 10 dBmV</div>
+        <div class="crc-status" id="rxStatus"></div>
+      </div>
+    </div>
+  </div>
+
+  <p class="section-label" style="margin-top:26px;">Cálculo em Cascata — Topologia da Instalação</p>
+  <div class="calc">
+    <p class="calc-hint">Monte a instalação na ordem física: Drop → metragem → Isolador → metragem → DC09 (o TAP já deriva pro ponto HD e a linha segue pelo OUT) → metragem → DC06 ou Divisor → cálculo final. O sistema mostra o nível em cada ponto derivado e o total de material gasto.</p>
+
+    <div class="calc-inputs" style="grid-template-columns:1fr 1fr;">
+      <div class="field">
+        <label>TX no drop (dBmV)</label>
+        <input type="number" step="0.1" inputmode="decimal" id="cascTx" placeholder="ex: 40">
+      </div>
+      <div class="field">
+        <label>RX no drop (dBmV)</label>
+        <input type="number" step="0.1" inputmode="decimal" id="cascRx" placeholder="ex: 10">
+      </div>
+    </div>
+
+    <div class="field" style="margin-top:12px;">
+      <label>Adicionar elemento na sequência</label>
+      <div class="check-row">
+        <select id="cascSelect">
+          <option value="">Selecione…</option>
+          <option value="__cabo__">Cabo (informar metros)</option>
+          <option value="__isolador__">Isolador — 0,05 dB</option>
+          <option value="__dc09__">DC09 · TAP 9 dB → ponto · segue OUT 1,5 dB</option>
+          <option value="__dc06__">DC06 · TAP 6 dB → ponto · segue OUT 2,5 dB</option>
+          <option value="__div2__">Divisor 1/2 — 4 dB (pontos finais)</option>
+          <option value="__div3__">Divisor 1/3 — 5 dB (pontos finais)</option>
+          <option value="__div4__">Divisor 1/4 — 7 dB (pontos finais)</option>
+        </select>
+        <input type="number" step="0.1" inputmode="decimal" id="cascCaboMetros" placeholder="m" style="display:none; max-width:80px;">
+        <button id="cascAdd" class="add-btn">+ Adicionar</button>
+      </div>
+    </div>
+
+    <div class="casc-chain" id="cascChain"></div>
+
+    <div class="calc-summary">
+      <p class="section-label" style="margin:14px 0 8px;">Material gasto</p>
+      <div class="calc-row">
+        <span>Cabo total (linha + pontas)</span>
+        <b id="cascMetrosTotal">0,0 m</b>
+      </div>
+      <div class="calc-row">
+        <span>Passivos usados</span>
+        <b id="cascPassivosTotal">—</b>
+      </div>
+      <div class="calc-row total">
+        <span>Atenuação total da linha</span>
+        <b id="cascTotal">0,0 dB</b>
+      </div>
+    </div>
+
+    <div class="calc-results">
+      <div class="calc-result-card">
+        <div class="crc-label">TX final da linha</div>
+        <div class="crc-value" id="cascTxFinal">— <span>dBmV</span></div>
+        <div class="crc-range">Padrão Claro: 38 a 51 dBmV</div>
+        <div class="crc-status" id="cascTxStatus"></div>
+      </div>
+      <div class="calc-result-card">
+        <div class="crc-label">RX final da linha</div>
+        <div class="crc-value" id="cascRxFinal">— <span>dBmV</span></div>
+        <div class="crc-range">Padrão Claro: -10 a 10 dBmV</div>
+        <div class="crc-status" id="cascRxStatus"></div>
+      </div>
+    </div>
+
+    <div class="mp-table-wrap" id="cascPontosWrap" style="display:none;">
+      <p class="section-label" style="margin-top:18px; margin-bottom:10px;">Pontos derivados (TAPs e divisor)</p>
+      <table class="mp-table">
+        <thead>
+          <tr><th>Ponto</th><th>Origem</th><th>TX</th><th>RX</th><th>Status</th></tr>
+        </thead>
+        <tbody id="cascPontosBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <p class="section-label" style="margin-top:26px;">Calculadora Multiponto — Instalação e Manutenção</p>
+  <div class="calc">
+    <p class="calc-hint">Informe o nível de partida (drop) e monte o caminho de cada ponto final (HD, Virtua, etc.) com os passivos usados até ele. O sistema calcula RX, TX, equalização, tilt e diagnóstico de cada ponto.</p>
+
+    <div class="calc-inputs" style="grid-template-columns:1fr 1fr;">
+      <div class="field">
+        <label>TX inicial no drop (dBmV)</label>
+        <input type="number" step="0.1" inputmode="decimal" id="mpTxInicial" placeholder="ex: 40">
+      </div>
+      <div class="field">
+        <label>RX inicial no drop (dBmV)</label>
+        <input type="number" step="0.1" inputmode="decimal" id="mpRxInicial" placeholder="ex: 10">
+      </div>
+    </div>
+
+    <div id="mpPointsContainer" style="margin-top:16px;"></div>
+
+    <button id="mpAddPoint" class="add-btn" style="margin-top:6px; width:100%;">+ Adicionar ponto (HD, Virtua…)</button>
+
+    <div class="mp-table-wrap" id="mpTableWrap" style="display:none;">
+      <p class="section-label" style="margin-top:20px; margin-bottom:10px;">Resumo dos pontos</p>
+      <table class="mp-table">
+        <thead>
+          <tr><th>Ponto</th><th>RX</th><th>TX</th><th>Equalização</th><th>Diagnóstico</th></tr>
+        </thead>
+        <tbody id="mpTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  </div>
+
+  <div class="tab-content" id="tabManutencao">
+  <div class="check">
+    <h3>Verificar medição em campo · padrão Claro no cliente</h3>
+    <div class="field" style="margin-bottom:10px;">
+      <label>TX medido (dBmV) · padrão 38 a 51</label>
+      <input type="number" step="0.1" inputmode="decimal" id="measuredTx" placeholder="ex: 45">
+    </div>
+    <div class="check-status" id="checkStatusTx"></div>
+
+    <div class="field" style="margin-top:14px; margin-bottom:10px;">
+      <label>RX medido (dBmV) · padrão -10 a 10</label>
+      <input type="number" step="0.1" inputmode="decimal" id="measuredRx" placeholder="ex: 2">
+    </div>
+    <div class="check-status" id="checkStatusRx"></div>
+
+    <div class="eq-box">
+      <div class="eq-row">
+        <span>Diferença TX − RX (rede interna)</span>
+        <b id="eqDiff">— dBmV</b>
+      </div>
+      <div class="eq-note">Padrão: entre 5 e 10 dB de diferença</div>
+      <div class="check-status" id="checkStatusEq"></div>
+    </div>
+
+    <div class="eq-box">
+      <button class="toggle-btn" id="toggleTilt">Verificar Tilt (CHA / CHB) <span id="toggleTiltArrow">▸</span></button>
+      <div id="tiltContent" style="display:none; margin-top:12px;">
+        <div class="calc-inputs" style="grid-template-columns:1fr 1fr;">
+          <div class="field">
+            <label>CHA medido (dBmV)</label>
+            <input type="number" step="0.1" inputmode="decimal" id="chaMedido" placeholder="ex: 17,5">
+          </div>
+          <div class="field">
+            <label>CHB medido (dBmV)</label>
+            <input type="number" step="0.1" inputmode="decimal" id="chbMedido" placeholder="ex: 8,5">
+          </div>
+        </div>
+        <div class="eq-row" style="margin-top:12px;">
+          <span>Tilt (CHA − CHB)</span>
+          <b id="tiltValue">— dB</b>
+        </div>
+        <div class="eq-note">Positivo: 0 a +10 dB · Flex: ~0 dB · Negativo: 0 a −10 dB</div>
+        <div class="check-status" id="checkStatusTilt"></div>
+      </div>
+    </div>
+  </div>
+
+  <p class="section-label" style="margin-top:26px;">Cálculo Interno de Manutenção</p>
+  <div class="calc">
+    <p class="calc-hint">Informe o que foi medido dentro da casa do cliente (na ONU/ponto final) e o trecho de cabo + passivos até o ponto externo (tap/poste). O sistema calcula o TX e RX que devem estar lá fora.</p>
+
+    <div class="calc-inputs">
+      <div class="field">
+        <label>TX interno medido (dBmV)</label>
+        <input type="number" step="0.1" inputmode="decimal" id="txInternoRev" placeholder="ex: 44">
+      </div>
+      <div class="field">
+        <label>RX interno medido (dBmV)</label>
+        <input type="number" step="0.1" inputmode="decimal" id="rxInternoRev" placeholder="ex: 3">
+      </div>
+      <div class="field">
+        <label>Cabo até o externo (m)</label>
+        <input type="number" step="0.1" inputmode="decimal" id="cabometrosRev" placeholder="ex: 10">
+      </div>
+    </div>
+
+    <div class="field" style="margin-top:12px;">
+      <label>Adicionar passivo do trecho</label>
+      <div class="check-row">
+        <select id="passivoSelectRev">
+          <option value="">Selecione…</option>
+        </select>
+        <button id="addPassivoRev" class="add-btn">+ Adicionar</button>
+      </div>
+    </div>
+
+    <div class="passivo-list" id="passivoListRev"></div>
+
+    <div class="calc-summary" id="calcSummaryRev">
+      <div class="calc-row">
+        <span>Perda do cabo</span>
+        <b id="sumCaboRev">0,0 dB</b>
+      </div>
+      <div class="calc-row">
+        <span>Perda dos passivos</span>
+        <b id="sumPassivosRev">0,0 dB</b>
+      </div>
+      <div class="calc-row total">
+        <span>Atenuação total</span>
+        <b id="sumTotalRev">0,0 dB</b>
+      </div>
+    </div>
+
+    <div class="calc-results">
+      <div class="calc-result-card">
+        <div class="crc-label">TX externo (lá fora)</div>
+        <div class="crc-value" id="txExterno">— <span>dBmV</span></div>
+        <div class="crc-range">Padrão Claro: 38 a 51 dBmV</div>
+        <div class="crc-status" id="txExternoStatus"></div>
+      </div>
+      <div class="calc-result-card">
+        <div class="crc-label">RX externo (lá fora)</div>
+        <div class="crc-value" id="rxExterno">— <span>dBmV</span></div>
+        <div class="crc-range">Padrão Claro: -10 a 10 dBmV</div>
+        <div class="crc-status" id="rxExternoStatus"></div>
+      </div>
+    </div>
+  </div>
+
+  </div>
+
+</main>
+
+<footer>Obs.: as cores dos taps no físico representam o valor de atenuação. Padrão Claro no cliente: TX 38 a 51 dBmV · RX -10 a 10 dBmV. Equalização (rede interna): diferença TX−RX dentro do padrão entre 5 e 10 dB; abaixo de 5 dB indica possível amplificador desequalizado ou, se RX muito negativo, água no TAP/drop. Tilt (CHA−CHB): positivo até +10 dB, flex ~0 dB, negativo até −10 dB. Cabo/drop: 0,16 dB de perda por metro. Multiponto: cada ponto herda o TX/RX inicial do drop menos seu próprio caminho de cabo + passivos.</footer>
+
+<script>
+/* ===== Navegação por abas ===== */
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.tab).classList.add('active');
+  });
+});
+
+const CLARO_TX_MIN_GLOBAL = 38, CLARO_TX_MAX_GLOBAL = 51;
+const CLARO_RX_MIN_GLOBAL = -10, CLARO_RX_MAX_GLOBAL = 10;
+
+const taps = [
+  { num:4,  tx:32, saidas:2, shape:'circle', color:'#7a4a2b', colorName:'Marrom'   },
+  { num:8,  tx:34, saidas:2, shape:'circle', color:'#9aa0a6', colorName:'Cinza'    },
+  { num:11, tx:36, saidas:4, shape:'square', color:'#7a4a2b', colorName:'Marrom'   },
+  { num:14, tx:38, saidas:2, shape:'circle', color:'#e8c547', colorName:'Amarelo'  },
+  { num:17, tx:40, saidas:8, shape:'hex',    color:'#ec1a63', colorName:'Rosa'     },
+  { num:20, tx:42, saidas:4, shape:'square', color:'#6b7280', colorName:'Preto'    },
+  { num:23, tx:44, saidas:2, shape:'circle', color:'#e0473f', colorName:'Vermelho' },
+];
+
+function hexToRgba(hex, alpha){
+  const h = hex.replace('#','');
+  const r = parseInt(h.substring(0,2),16);
+  const g = parseInt(h.substring(2,4),16);
+  const b = parseInt(h.substring(4,6),16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function fmt(n){
+  return n.toFixed(1).replace('.', ',');
+}
+
+const tapGrid = document.getElementById('tapGrid');
+const ladder = document.getElementById('ladder');
+let selected = null;
+
+taps.forEach(t=>{
+  const btn = document.createElement('button');
+  btn.className = 'tap-btn shape-' + t.shape;
+  btn.textContent = t.num;
+  btn.style.borderColor = t.color;
+  btn.style.background = hexToRgba(t.color, 0.22);
+  btn.addEventListener('click', ()=> selectTap(t.num));
+  btn.dataset.num = t.num;
+  tapGrid.appendChild(btn);
+});
+
+const colorLegend = document.getElementById('colorLegend');
+taps.forEach(t=>{
+  const item = document.createElement('div');
+  item.className = 'color-item';
+  item.innerHTML = `<i style="background:${t.color}"></i>TAP ${t.num} — ${t.colorName}`;
+  colorLegend.appendChild(item);
+});
+
+taps.forEach((t,i)=>{
+  const rung = document.createElement('div');
+  rung.className = 'rung';
+  rung.dataset.num = t.num;
+  rung.innerHTML = `<div class="dot" style="background:${t.color}; border-color:${t.color};"></div><div class="num">${t.num}</div>`;
+  ladder.appendChild(rung);
+  if(i < taps.length - 1){
+    const c = document.createElement('div');
+    c.className = 'connector';
+    ladder.appendChild(c);
+  }
+});
+
+function selectTap(num){
+  selected = taps.find(t=>t.num===num);
+  document.querySelectorAll('.tap-btn').forEach(b=>{
+    b.classList.toggle('selected', Number(b.dataset.num)===num);
+  });
+  document.getElementById('rTap').textContent = selected.num;
+  document.getElementById('rColorName').textContent = '· ' + selected.colorName;
+  document.getElementById('rSwatch').style.background = selected.color;
+  document.getElementById('rSaidas').textContent = selected.saidas + ' saídas';
+  document.getElementById('rTx').innerHTML = selected.tx + ' <span>dBmV</span>';
+  document.querySelectorAll('.rung').forEach(r=>{
+    r.classList.toggle('active', Number(r.dataset.num)===num);
+  });
+}
+
+/* ===== Verificação de medição em campo (padrão Claro + equalização) ===== */
+const measuredTxInput = document.getElementById('measuredTx');
+const measuredRxInput = document.getElementById('measuredRx');
+const statusTxBox = document.getElementById('checkStatusTx');
+const statusRxBox = document.getElementById('checkStatusRx');
+const eqDiffEl = document.getElementById('eqDiff');
+const statusEqBox = document.getElementById('checkStatusEq');
+
+function evaluateAgainstRange(value, min, max, box){
+  if(isNaN(value)){
+    box.classList.remove('show','ok','warn','bad');
+    return;
+  }
+  box.classList.add('show');
+  box.classList.remove('ok','warn','bad');
+  let cls, msg;
+  if(value >= min && value <= max){
+    cls = 'ok';
+    msg = `Dentro do padrão Claro (${min} a ${max} dBmV)`;
+  } else {
+    const fora = value < min ? (min - value) : (value - max);
+    cls = fora <= 2 ? 'warn' : 'bad';
+    msg = `Fora do padrão (${value > max ? '+' : '-'}${fora.toFixed(1)} dBmV do limite) — verificar`;
+  }
+  box.classList.add(cls);
+  box.textContent = msg;
+}
+
+function evaluateEqualization(tx, rx){
+  if(isNaN(tx) || isNaN(rx)){
+    eqDiffEl.textContent = '— dBmV';
+    statusEqBox.classList.remove('show','ok','warn','bad');
+    return;
+  }
+  const diff = tx - rx;
+  eqDiffEl.textContent = fmt(diff) + ' dBmV';
+  statusEqBox.classList.add('show');
+  statusEqBox.classList.remove('ok','warn','bad');
+
+  let cls, msg;
+  const diffTxt = fmt(diff) + ' dB';
+
+  if(diff >= 5 && diff <= 10){
+    cls = 'ok';
+    msg = `Dentro do padrão (diferença de ${diffTxt}) — rede interna equalizada`;
+  } else if(diff < 5){
+    // abaixo da margem mínima de 5 dB -> investigar causa pelo RX
+    if(rx <= -10){
+      cls = 'bad';
+      msg = `Diferença de ${diffTxt} — RX muito negativo: possível infiltração de água no TAP ou no drop`;
+    } else if(tx >= 45 && rx >= 10){
+      cls = 'bad';
+      msg = `Diferença de ${diffTxt} — TX alto e RX alto: possível amplificador desequalizado`;
+    } else {
+      cls = 'bad';
+      msg = `Diferença de ${diffTxt} — abaixo do padrão (mín. 5 dB): possível amplificador desequalizado`;
+    }
+  } else {
+    cls = 'warn';
+    msg = `Diferença de ${diffTxt} — acima do padrão (máx. 10 dB): verificar equalização`;
+  }
+
+  statusEqBox.classList.add(cls);
+  statusEqBox.textContent = msg;
+}
+
+function evaluateMeasurement(){
+  const tx = parseFloat(measuredTxInput.value);
+  const rx = parseFloat(measuredRxInput.value);
+  evaluateAgainstRange(tx, CLARO_TX_MIN_GLOBAL, CLARO_TX_MAX_GLOBAL, statusTxBox);
+  evaluateAgainstRange(rx, CLARO_RX_MIN_GLOBAL, CLARO_RX_MAX_GLOBAL, statusRxBox);
+  evaluateEqualization(tx, rx);
+}
+
+measuredTxInput.addEventListener('input', evaluateMeasurement);
+measuredRxInput.addEventListener('input', evaluateMeasurement);
+
+// default selection
+selectTap(17);
+
+/* ===== Tilt (CHA - CHB) ===== */
+const chaInput = document.getElementById('chaMedido');
+const chbInput = document.getElementById('chbMedido');
+const tiltValueEl = document.getElementById('tiltValue');
+const statusTiltBox = document.getElementById('checkStatusTilt');
+
+function evaluateTilt(){
+  const cha = parseFloat(chaInput.value);
+  const chb = parseFloat(chbInput.value);
+  if(isNaN(cha) || isNaN(chb)){
+    tiltValueEl.textContent = '— dB';
+    statusTiltBox.classList.remove('show','ok','warn','bad');
+    return;
+  }
+  const tilt = cha - chb;
+  tiltValueEl.textContent = (tilt>=0?'+':'') + fmt(tilt) + ' dB';
+  statusTiltBox.classList.add('show');
+  statusTiltBox.classList.remove('ok','warn','bad');
+  let cls, msg;
+  if(Math.abs(tilt) <= 1){
+    cls = 'ok';
+    msg = `Tilt Flex (${tilt>=0?'+':''}${fmt(tilt)} dB) — sem inclinação`;
+  } else if(tilt > 1 && tilt <= 10){
+    cls = 'ok';
+    msg = `Tilt Positivo (+${fmt(tilt)} dB) — dentro do padrão`;
+  } else if(tilt < -1 && tilt >= -10){
+    cls = 'ok';
+    msg = `Tilt Negativo (${fmt(tilt)} dB) — dentro do padrão`;
+  } else {
+    cls = 'bad';
+    msg = `Tilt fora do padrão (${tilt>=0?'+':''}${fmt(tilt)} dB) — verificar equalização`;
+  }
+  statusTiltBox.classList.add(cls);
+  statusTiltBox.textContent = msg;
+}
+
+chaInput.addEventListener('input', evaluateTilt);
+chbInput.addEventListener('input', evaluateTilt);
+
+const toggleTiltBtn = document.getElementById('toggleTilt');
+const tiltContent = document.getElementById('tiltContent');
+const toggleTiltArrow = document.getElementById('toggleTiltArrow');
+toggleTiltBtn.addEventListener('click', ()=>{
+  const isHidden = tiltContent.style.display === 'none';
+  tiltContent.style.display = isHidden ? 'block' : 'none';
+  toggleTiltArrow.textContent = isHidden ? '▾' : '▸';
+});
+
+/* ===== Calculadora TX/RX ===== */
+const CABLE_LOSS_PER_M = 0.16;
+const CLARO_TX_MIN = CLARO_TX_MIN_GLOBAL, CLARO_TX_MAX = CLARO_TX_MAX_GLOBAL;
+const CLARO_RX_MIN = CLARO_RX_MIN_GLOBAL, CLARO_RX_MAX = CLARO_RX_MAX_GLOBAL;
+
+const passivos = [
+  { id:'isolador', label:'Isolador', db:0.05 },
+  { id:'dc06out', label:'DC06 (OUT)', db:2.5 },
+  { id:'dc06tap', label:'DC06 (TAP)', db:6 },
+  { id:'dc09out', label:'DC09 (OUT)', db:1.5 },
+  { id:'dc09tap', label:'DC09 (TAP)', db:9 },
+  { id:'div2',    label:'Divisor 1/2', db:4 },
+  { id:'div3',    label:'Divisor 1/3', db:5 },
+  { id:'div4',    label:'Divisor 1/4', db:7 },
+];
+
+let addedPassivos = [];
+
+const passivoSelect = document.getElementById('passivoSelect');
+passivos.forEach(p=>{
+  const opt = document.createElement('option');
+  opt.value = p.id;
+  opt.textContent = `${p.label} — ${fmt(p.db)} dB`;
+  passivoSelect.appendChild(opt);
+});
+
+document.getElementById('addPassivo').addEventListener('click', ()=>{
+  const id = passivoSelect.value;
+  if(!id) return;
+  const p = passivos.find(x=>x.id===id);
+  addedPassivos.push(p);
+  renderPassivos();
+  calcularRede();
+});
+
+function renderPassivos(){
+  const list = document.getElementById('passivoList');
+  list.innerHTML = '';
+  addedPassivos.forEach((p, idx)=>{
+    const row = document.createElement('div');
+    row.className = 'passivo-item';
+    row.innerHTML = `<span><span class="pname">${p.label}</span><span class="pval">${fmt(p.db)} dB</span></span>
+      <button class="premove" data-idx="${idx}">×</button>`;
+    list.appendChild(row);
+  });
+  list.querySelectorAll('.premove').forEach(btn=>{
+    btn.addEventListener('click', (e)=>{
+      const idx = Number(e.target.dataset.idx);
+      addedPassivos.splice(idx,1);
+      renderPassivos();
+      calcularRede();
+    });
+  });
+}
+
+function calcularRede(){
+  const txInicial = parseFloat(document.getElementById('txInicial').value);
+  const rxInicial = parseFloat(document.getElementById('rxInicial').value);
+  const metros = parseFloat(document.getElementById('cabometros').value) || 0;
+
+  const perdaCabo = metros * CABLE_LOSS_PER_M;
+  const perdaPassivos = addedPassivos.reduce((s,p)=>s+p.db, 0);
+  const total = perdaCabo + perdaPassivos;
+
+  document.getElementById('sumCabo').textContent = fmt(perdaCabo) + ' dB';
+  document.getElementById('sumPassivos').textContent = fmt(perdaPassivos) + ' dB';
+  document.getElementById('sumTotal').textContent = fmt(total) + ' dB';
+
+  const txFinalEl = document.getElementById('txFinal');
+  const rxFinalEl = document.getElementById('rxFinal');
+  const txCard = txFinalEl.closest('.calc-result-card');
+  const rxCard = rxFinalEl.closest('.calc-result-card');
+  const txStatus = document.getElementById('txStatus');
+  const rxStatus = document.getElementById('rxStatus');
+
+  txCard.classList.remove('ok','bad');
+  rxCard.classList.remove('ok','bad');
+  txStatus.classList.remove('ok','bad');
+  rxStatus.classList.remove('ok','bad');
+  txStatus.textContent = '';
+  rxStatus.textContent = '';
+
+  if(!isNaN(txInicial)){
+    const txFinal = txInicial + total;
+    txFinalEl.innerHTML = fmt(txFinal) + ' <span>dBmV</span>';
+    const dentro = txFinal >= CLARO_TX_MIN && txFinal <= CLARO_TX_MAX;
+    txCard.classList.add(dentro ? 'ok' : 'bad');
+    txStatus.classList.add(dentro ? 'ok' : 'bad');
+    txStatus.textContent = dentro ? 'Dentro do padrão' : 'Fora do padrão';
+  } else {
+    txFinalEl.innerHTML = '— <span>dBmV</span>';
+  }
+
+  if(!isNaN(rxInicial)){
+    const rxFinal = rxInicial - total;
+    rxFinalEl.innerHTML = fmt(rxFinal) + ' <span>dBmV</span>';
+    const dentro = rxFinal >= CLARO_RX_MIN && rxFinal <= CLARO_RX_MAX;
+    rxCard.classList.add(dentro ? 'ok' : 'bad');
+    rxStatus.classList.add(dentro ? 'ok' : 'bad');
+    rxStatus.textContent = dentro ? 'Dentro do padrão' : 'Fora do padrão';
+  } else {
+    rxFinalEl.innerHTML = '— <span>dBmV</span>';
+  }
+}
+
+['txInicial','rxInicial','cabometros'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', calcularRede);
+});
+
+calcularRede();
+
+/* ===== Cálculo Reverso: interno (cliente) -> externo (tap/poste) ===== */
+let addedPassivosRev = [];
+
+const passivoSelectRev = document.getElementById('passivoSelectRev');
+passivos.forEach(p=>{
+  const opt = document.createElement('option');
+  opt.value = p.id;
+  opt.textContent = `${p.label} — ${fmt(p.db)} dB`;
+  passivoSelectRev.appendChild(opt);
+});
+
+document.getElementById('addPassivoRev').addEventListener('click', ()=>{
+  const id = passivoSelectRev.value;
+  if(!id) return;
+  const p = passivos.find(x=>x.id===id);
+  addedPassivosRev.push(p);
+  renderPassivosRev();
+  calcularReverso();
+});
+
+function renderPassivosRev(){
+  const list = document.getElementById('passivoListRev');
+  list.innerHTML = '';
+  addedPassivosRev.forEach((p, idx)=>{
+    const row = document.createElement('div');
+    row.className = 'passivo-item';
+    row.innerHTML = `<span><span class="pname">${p.label}</span><span class="pval">${fmt(p.db)} dB</span></span>
+      <button class="premove" data-idx="${idx}">×</button>`;
+    list.appendChild(row);
+  });
+  list.querySelectorAll('.premove').forEach(btn=>{
+    btn.addEventListener('click', (e)=>{
+      const idx = Number(e.target.dataset.idx);
+      addedPassivosRev.splice(idx,1);
+      renderPassivosRev();
+      calcularReverso();
+    });
+  });
+}
+
+function calcularReverso(){
+  const txInterno = parseFloat(document.getElementById('txInternoRev').value);
+  const rxInterno = parseFloat(document.getElementById('rxInternoRev').value);
+  const metros = parseFloat(document.getElementById('cabometrosRev').value) || 0;
+
+  const perdaCabo = metros * CABLE_LOSS_PER_M;
+  const perdaPassivos = addedPassivosRev.reduce((s,p)=>s+p.db, 0);
+  const total = perdaCabo + perdaPassivos;
+
+  document.getElementById('sumCaboRev').textContent = fmt(perdaCabo) + ' dB';
+  document.getElementById('sumPassivosRev').textContent = fmt(perdaPassivos) + ' dB';
+  document.getElementById('sumTotalRev').textContent = fmt(total) + ' dB';
+
+  const txExtEl = document.getElementById('txExterno');
+  const rxExtEl = document.getElementById('rxExterno');
+  const txExtCard = txExtEl.closest('.calc-result-card');
+  const rxExtCard = rxExtEl.closest('.calc-result-card');
+  const txExtStatus = document.getElementById('txExternoStatus');
+  const rxExtStatus = document.getElementById('rxExternoStatus');
+
+  txExtCard.classList.remove('ok','bad');
+  rxExtCard.classList.remove('ok','bad');
+  txExtStatus.classList.remove('ok','bad');
+  rxExtStatus.classList.remove('ok','bad');
+  txExtStatus.textContent = '';
+  rxExtStatus.textContent = '';
+
+  if(!isNaN(txInterno)){
+    const txExterno = txInterno - total;
+    txExtEl.innerHTML = fmt(txExterno) + ' <span>dBmV</span>';
+    const dentro = txExterno >= CLARO_TX_MIN && txExterno <= CLARO_TX_MAX;
+    txExtCard.classList.add(dentro ? 'ok' : 'bad');
+    txExtStatus.classList.add(dentro ? 'ok' : 'bad');
+    txExtStatus.textContent = dentro ? 'Dentro do padrão' : 'Fora do padrão';
+  } else {
+    txExtEl.innerHTML = '— <span>dBmV</span>';
+  }
+
+  if(!isNaN(rxInterno)){
+    const rxExterno = rxInterno + total;
+    rxExtEl.innerHTML = fmt(rxExterno) + ' <span>dBmV</span>';
+    const dentro = rxExterno >= CLARO_RX_MIN && rxExterno <= CLARO_RX_MAX;
+    rxExtCard.classList.add(dentro ? 'ok' : 'bad');
+    rxExtStatus.classList.add(dentro ? 'ok' : 'bad');
+    rxExtStatus.textContent = dentro ? 'Dentro do padrão' : 'Fora do padrão';
+  } else {
+    rxExtEl.innerHTML = '— <span>dBmV</span>';
+  }
+}
+
+['txInternoRev','rxInternoRev','cabometrosRev'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', calcularReverso);
+});
+
+calcularReverso();
+
+/* ===== Calculadora Multiponto ===== */
+let mpPoints = [];
+let mpNextId = 1;
+
+function mpAddPoint(){
+  mpPoints.push({
+    id: mpNextId++,
+    name: 'Ponto ' + mpPoints.length,
+    cabo: 0,
+    passivos: [],
+    cha: '',
+    chb: ''
+  });
+  mpRenderPoints();
+  mpRecalcAll();
+}
+
+document.getElementById('mpAddPoint').addEventListener('click', mpAddPoint);
+
+function mpRenderPoints(){
+  const container = document.getElementById('mpPointsContainer');
+  container.innerHTML = '';
+
+  mpPoints.forEach(pt=>{
+    const card = document.createElement('div');
+    card.className = 'mp-point';
+
+    const head = document.createElement('div');
+    head.className = 'mp-point-head';
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.value = pt.name;
+    nameInput.addEventListener('input', e=>{ pt.name = e.target.value; mpRecalcAll(); });
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'mp-remove';
+    removeBtn.textContent = '×';
+    removeBtn.addEventListener('click', ()=>{
+      mpPoints = mpPoints.filter(p=>p.id !== pt.id);
+      mpRenderPoints();
+      mpRecalcAll();
+    });
+    head.appendChild(nameInput);
+    head.appendChild(removeBtn);
+    card.appendChild(head);
+
+    const row = document.createElement('div');
+    row.className = 'mp-row';
+    row.innerHTML = `
+      <div class="field">
+        <label>Cabo até o ponto (m)</label>
+        <input type="number" step="0.1" inputmode="decimal" class="mp-cabo" placeholder="ex: 8" value="${pt.cabo || ''}">
+      </div>
+      <div class="field">
+        <label>&nbsp;</label>
+      </div>
+    `;
+    row.querySelector('.mp-cabo').addEventListener('input', e=>{
+      pt.cabo = parseFloat(e.target.value) || 0;
+      mpRecalcAll();
+    });
+    card.appendChild(row);
+
+    const passivoRow = document.createElement('div');
+    passivoRow.className = 'mp-passivo-row';
+    const select = document.createElement('select');
+    select.innerHTML = '<option value="">Adicionar passivo…</option>' +
+      passivos.map(p=>`<option value="${p.id}">${p.label} — ${fmt(p.db)} dB</option>`).join('');
+    const addBtn = document.createElement('button');
+    addBtn.className = 'add-btn';
+    addBtn.textContent = '+';
+    addBtn.addEventListener('click', ()=>{
+      const id = select.value;
+      if(!id) return;
+      const p = passivos.find(x=>x.id===id);
+      pt.passivos.push(p);
+      mpRenderPoints();
+      mpRecalcAll();
+    });
+    passivoRow.appendChild(select);
+    passivoRow.appendChild(addBtn);
+    card.appendChild(passivoRow);
+
+    if(pt.passivos.length){
+      const list = document.createElement('div');
+      list.className = 'passivo-list';
+      pt.passivos.forEach((p, idx)=>{
+        const item = document.createElement('div');
+        item.className = 'passivo-item';
+        item.innerHTML = `<span><span class="pname">${p.label}</span><span class="pval">${fmt(p.db)} dB</span></span>
+          <button class="premove">×</button>`;
+        item.querySelector('.premove').addEventListener('click', ()=>{
+          pt.passivos.splice(idx,1);
+          mpRenderPoints();
+          mpRecalcAll();
+        });
+        list.appendChild(item);
+      });
+      card.appendChild(list);
+    }
+
+    const results = document.createElement('div');
+    results.className = 'mp-results';
+    results.innerHTML = `
+      <div class="mp-result" data-role="rx">
+        <div class="lbl">RX</div>
+        <div class="val" data-role="rxVal">— dBmV</div>
+      </div>
+      <div class="mp-result" data-role="tx">
+        <div class="lbl">TX</div>
+        <div class="val" data-role="txVal">— dBmV</div>
+      </div>
+      <div class="mp-diag" data-role="diag" style="display:none;"></div>
+    `;
+    card.appendChild(results);
+    card.dataset.ptId = pt.id;
+
+    container.appendChild(card);
+  });
+}
+
+function mpEvaluateDiag(tx, rx){
+  const diff = tx - rx;
+  if(diff >= 5 && diff <= 10){
+    return { cls:'ok', msg:`Equalização normal (dif. ${fmt(diff)} dB)` };
+  } else if(diff < 5){
+    if(rx <= -10){
+      return { cls:'bad', msg:`Dif. ${fmt(diff)} dB — RX muito negativo: possível água no TAP/drop` };
+    } else if(tx >= 45 && rx >= 10){
+      return { cls:'bad', msg:`Dif. ${fmt(diff)} dB — TX e RX altos: possível amplificador desequalizado` };
+    } else {
+      return { cls:'bad', msg:`Dif. ${fmt(diff)} dB — abaixo do padrão: possível amplificador desequalizado` };
+    }
+  } else {
+    return { cls:'warn', msg:`Dif. ${fmt(diff)} dB — acima do padrão: verificar equalização` };
+  }
+}
+
+function mpRecalcAll(){
+  const txInicial = parseFloat(document.getElementById('mpTxInicial').value);
+  const rxInicial = parseFloat(document.getElementById('mpRxInicial').value);
+
+  const tableBody = document.getElementById('mpTableBody');
+  const tableWrap = document.getElementById('mpTableWrap');
+  tableBody.innerHTML = '';
+
+  const cards = document.querySelectorAll('.mp-point');
+
+  mpPoints.forEach(pt=>{
+    const card = document.querySelector(`.mp-point[data-pt-id="${pt.id}"]`);
+    const perda = (pt.cabo || 0) * CABLE_LOSS_PER_M + pt.passivos.reduce((s,p)=>s+p.db,0);
+
+    let txFinal = NaN, rxFinal = NaN;
+    if(!isNaN(txInicial)) txFinal = txInicial + perda;
+    if(!isNaN(rxInicial)) rxFinal = rxInicial - perda;
+
+    if(card){
+      const rxValEl = card.querySelector('[data-role="rxVal"]');
+      const txValEl = card.querySelector('[data-role="txVal"]');
+      const rxBox = card.querySelector('[data-role="rx"]');
+      const txBox = card.querySelector('[data-role="tx"]');
+      const diagBox = card.querySelector('[data-role="diag"]');
+
+      rxBox.classList.remove('ok','bad');
+      txBox.classList.remove('ok','bad');
+
+      if(!isNaN(rxFinal)){
+        rxValEl.textContent = fmt(rxFinal) + ' dBmV';
+        const okRx = rxFinal >= CLARO_RX_MIN && rxFinal <= CLARO_RX_MAX;
+        rxBox.classList.add(okRx ? 'ok' : 'bad');
+      } else {
+        rxValEl.textContent = '— dBmV';
+      }
+
+      if(!isNaN(txFinal)){
+        txValEl.textContent = fmt(txFinal) + ' dBmV';
+        const okTx = txFinal >= CLARO_TX_MIN && txFinal <= CLARO_TX_MAX;
+        txBox.classList.add(okTx ? 'ok' : 'bad');
+      } else {
+        txValEl.textContent = '— dBmV';
+      }
+
+      if(!isNaN(txFinal) && !isNaN(rxFinal)){
+        const diag = mpEvaluateDiag(txFinal, rxFinal);
+        diagBox.style.display = 'block';
+        diagBox.className = 'mp-diag ' + diag.cls;
+        diagBox.textContent = diag.msg;
+      } else {
+        diagBox.style.display = 'none';
+      }
+    }
+
+    // linha da tabela resumo
+    const tr = document.createElement('tr');
+    let diagTxt = '—', diagCls = '';
+    if(!isNaN(txFinal) && !isNaN(rxFinal)){
+      const diag = mpEvaluateDiag(txFinal, rxFinal);
+      diagTxt = diag.msg;
+      diagCls = 'tag-' + diag.cls;
+    }
+    tr.innerHTML = `
+      <td>${pt.name}</td>
+      <td>${!isNaN(rxFinal) ? fmt(rxFinal) : '—'}</td>
+      <td>${!isNaN(txFinal) ? fmt(txFinal) : '—'}</td>
+      <td class="${diagCls}">${!isNaN(txFinal)&&!isNaN(rxFinal) ? fmt(txFinal-rxFinal)+' dB' : '—'}</td>
+      <td class="${diagCls}">${diagTxt}</td>
+    `;
+    tableBody.appendChild(tr);
+  });
+
+  tableWrap.style.display = mpPoints.length ? 'block' : 'none';
+}
+
+document.getElementById('mpTxInicial').addEventListener('input', mpRecalcAll);
+document.getElementById('mpRxInicial').addEventListener('input', mpRecalcAll);
+
+/* ===== Cálculo em Cascata (topologia com derivações TAP) ===== */
+let cascItems = [];
+let cascPontoSeq = 1;
+
+const cascSelect = document.getElementById('cascSelect');
+const cascCaboMetros = document.getElementById('cascCaboMetros');
+
+cascSelect.addEventListener('change', ()=>{
+  cascCaboMetros.style.display = cascSelect.value === '__cabo__' ? 'block' : 'none';
+});
+
+document.getElementById('cascAdd').addEventListener('click', ()=>{
+  const val = cascSelect.value;
+  if(!val) return;
+
+  if(val === '__cabo__'){
+    const m = parseFloat(cascCaboMetros.value);
+    if(isNaN(m) || m <= 0) return;
+    cascItems.push({ tipo:'cabo', label:`Cabo ${fmt(m)} m`, db: m * CABLE_LOSS_PER_M, metros:m });
+    cascCaboMetros.value = '';
+  } else if(val === '__isolador__'){
+    cascItems.push({ tipo:'passivo', label:'Isolador', db:0.05 });
+  } else if(val === '__dc09__'){
+    cascItems.push({ tipo:'dc', label:'DC09', outDb:1.5, tapDb:9, pontoNome:'HD '+(cascPontoSeq++), caboPonto:0 });
+  } else if(val === '__dc06__'){
+    cascItems.push({ tipo:'dc', label:'DC06', outDb:2.5, tapDb:6, pontoNome:'HD '+(cascPontoSeq++), caboPonto:0 });
+  } else if(val === '__div2__'){
+    cascItems.push({ tipo:'divisor', label:'Divisor 1/2', db:4, saidas:2 });
+  } else if(val === '__div3__'){
+    cascItems.push({ tipo:'divisor', label:'Divisor 1/3', db:5, saidas:3 });
+  } else if(val === '__div4__'){
+    cascItems.push({ tipo:'divisor', label:'Divisor 1/4', db:7, saidas:4 });
+  }
+  cascRender();
+});
+
+function cascStatusTag(tx, rx){
+  const okTx = tx >= CLARO_TX_MIN && tx <= CLARO_TX_MAX;
+  const okRx = rx >= CLARO_RX_MIN && rx <= CLARO_RX_MAX;
+  if(okTx && okRx) return { cls:'tag-ok', txt:'OK' };
+  return { cls:'tag-bad', txt:'Fora do padrão' };
+}
+
+function cascRender(){
+  const chain = document.getElementById('cascChain');
+  chain.innerHTML = '';
+
+  const tx0 = parseFloat(document.getElementById('cascTx').value);
+  const rx0 = parseFloat(document.getElementById('cascRx').value);
+  const temNiveis = !isNaN(tx0) && !isNaN(rx0);
+
+  let acum = 0;
+  let metrosTotal = 0;
+  const passivosUsados = {};
+  const pontos = [];
+
+  cascItems.forEach((item, idx)=>{
+    const row = document.createElement('div');
+    row.className = 'casc-item';
+
+    let nome = item.label;
+    let dbLinha = 0;
+
+    if(item.tipo === 'cabo'){
+      dbLinha = item.db;
+      metrosTotal += item.metros;
+    } else if(item.tipo === 'passivo'){
+      dbLinha = item.db;
+      passivosUsados[item.label] = (passivosUsados[item.label]||0) + 1;
+    } else if(item.tipo === 'dc'){
+      dbLinha = item.outDb;
+      passivosUsados[item.label] = (passivosUsados[item.label]||0) + 1;
+      // ponto derivado pelo TAP
+      const perdaPonto = acum + item.tapDb + (item.caboPonto||0) * CABLE_LOSS_PER_M;
+      metrosTotal += (item.caboPonto||0);
+      if(temNiveis){
+        pontos.push({
+          nome: item.pontoNome,
+          origem: item.label + ' (TAP ' + fmt(item.tapDb) + ' dB' + (item.caboPonto ? ' + ' + fmt(item.caboPonto) + ' m' : '') + ')',
+          tx: tx0 + perdaPonto,
+          rx: rx0 - perdaPonto
+        });
+      }
+      nome = item.label + ' · OUT ' + fmt(item.outDb) + ' dB';
+    } else if(item.tipo === 'divisor'){
+      dbLinha = item.db;
+      passivosUsados[item.label] = (passivosUsados[item.label]||0) + 1;
+      const perdaPonto = acum + item.db;
+      if(temNiveis){
+        for(let s=1; s<=item.saidas; s++){
+          pontos.push({
+            nome: 'Saída ' + s + ' (' + item.label + ')',
+            origem: item.label + ' — ' + fmt(item.db) + ' dB',
+            tx: tx0 + perdaPonto,
+            rx: rx0 - perdaPonto
+          });
+        }
+      }
+    }
+
+    acum += dbLinha;
+
+    let levels = temNiveis ? `TX ${fmt(tx0 + acum)} · RX ${fmt(rx0 - acum)}` : '';
+
+    row.innerHTML = `
+      <div class="c-idx">${idx+1}</div>
+      <div class="c-name">${nome}</div>
+      <div class="c-db">+${fmt(dbLinha)} dB</div>
+      <div class="c-levels">${levels}</div>
+      <button class="c-remove">×</button>
+    `;
+    row.querySelector('.c-remove').addEventListener('click', ()=>{
+      cascItems.splice(idx,1);
+      cascRender();
+    });
+    chain.appendChild(row);
+
+    // linha extra editável para DC: nome do ponto + metros do cabo até o ponto
+    if(item.tipo === 'dc'){
+      const sub = document.createElement('div');
+      sub.className = 'casc-item casc-sub';
+      const perdaPonto = (acum - dbLinha) + item.tapDb + (item.caboPonto||0) * CABLE_LOSS_PER_M;
+      const lvl = temNiveis ? `TX ${fmt(tx0 + perdaPonto)} · RX ${fmt(rx0 - perdaPonto)}` : '';
+      sub.innerHTML = `
+        <div class="c-idx" style="background:var(--blue);">↳</div>
+        <input type="text" class="sub-nome" value="${item.pontoNome}">
+        <span class="c-db">TAP ${fmt(item.tapDb)} dB</span>
+        <input type="number" step="0.1" inputmode="decimal" class="sub-cabo" placeholder="m" value="${item.caboPonto || ''}" style="max-width:64px;">
+        <div class="c-levels">${lvl}</div>
+      `;
+      sub.querySelector('.sub-nome').addEventListener('input', e=>{
+        item.pontoNome = e.target.value;
+        cascRenderTableOnly();
+      });
+      sub.querySelector('.sub-cabo').addEventListener('change', e=>{
+        item.caboPonto = parseFloat(e.target.value) || 0;
+        cascRender();
+      });
+      chain.appendChild(sub);
+    }
+  });
+
+  // material
+  document.getElementById('cascMetrosTotal').textContent = fmt(metrosTotal) + ' m';
+  const passivosTxt = Object.entries(passivosUsados).map(([k,v])=> v>1 ? `${v}× ${k}` : k).join(', ');
+  document.getElementById('cascPassivosTotal').textContent = passivosTxt || '—';
+  document.getElementById('cascTotal').textContent = fmt(acum) + ' dB';
+
+  // final da linha
+  const txFinalEl = document.getElementById('cascTxFinal');
+  const rxFinalEl = document.getElementById('cascRxFinal');
+  const txCard = txFinalEl.closest('.calc-result-card');
+  const rxCard = rxFinalEl.closest('.calc-result-card');
+  const txStatus = document.getElementById('cascTxStatus');
+  const rxStatus = document.getElementById('cascRxStatus');
+
+  txCard.classList.remove('ok','bad');
+  rxCard.classList.remove('ok','bad');
+  txStatus.classList.remove('ok','bad');
+  rxStatus.classList.remove('ok','bad');
+  txStatus.textContent = '';
+  rxStatus.textContent = '';
+
+  if(!isNaN(tx0)){
+    const txF = tx0 + acum;
+    txFinalEl.innerHTML = fmt(txF) + ' <span>dBmV</span>';
+    const ok = txF >= CLARO_TX_MIN && txF <= CLARO_TX_MAX;
+    txCard.classList.add(ok?'ok':'bad');
+    txStatus.classList.add(ok?'ok':'bad');
+    txStatus.textContent = ok ? 'Dentro do padrão' : 'Fora do padrão';
+  } else {
+    txFinalEl.innerHTML = '— <span>dBmV</span>';
+  }
+
+  if(!isNaN(rx0)){
+    const rxF = rx0 - acum;
+    rxFinalEl.innerHTML = fmt(rxF) + ' <span>dBmV</span>';
+    const ok = rxF >= CLARO_RX_MIN && rxF <= CLARO_RX_MAX;
+    rxCard.classList.add(ok?'ok':'bad');
+    rxStatus.classList.add(ok?'ok':'bad');
+    rxStatus.textContent = ok ? 'Dentro do padrão' : 'Fora do padrão';
+  } else {
+    rxFinalEl.innerHTML = '— <span>dBmV</span>';
+  }
+
+  // tabela de pontos derivados
+  window.__cascPontos = pontos;
+  cascRenderTableOnly();
+}
+
+function cascRenderTableOnly(){
+  const pontos = window.__cascPontos || [];
+  const wrap = document.getElementById('cascPontosWrap');
+  const body = document.getElementById('cascPontosBody');
+  body.innerHTML = '';
+
+  // atualizar nomes vindos dos inputs
+  let i = 0;
+  cascItems.forEach(item=>{
+    if(item.tipo === 'dc' && pontos[i]){
+      // encontrar ponto correspondente pela ordem dos DCs
+    }
+  });
+
+  pontos.forEach(p=>{
+    const st = cascStatusTag(p.tx, p.rx);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${p.nome}</td>
+      <td>${p.origem}</td>
+      <td>${fmt(p.tx)}</td>
+      <td>${fmt(p.rx)}</td>
+      <td class="${st.cls}">${st.txt}</td>
+    `;
+    body.appendChild(tr);
+  });
+
+  wrap.style.display = pontos.length ? 'block' : 'none';
+}
+
+document.getElementById('cascTx').addEventListener('input', cascRender);
+document.getElementById('cascRx').addEventListener('input', cascRender);
+
+cascRender();
+</script>
+
+<footer style="text-align:center;font-size:12px;color:var(--text-dim,#8b98a5);padding:18px 12px 26px;font-family:'Inter',-apple-system,'Segoe UI',sans-serif;">
+  <b style="color:var(--text,#e8edf2)">AFLINE</b> &middot; Consulta de Níveis por TAP — Desenvolvido por Israelson Diego Rodrigues Sevalho
+</footer>
+
+</body>
+</html>
